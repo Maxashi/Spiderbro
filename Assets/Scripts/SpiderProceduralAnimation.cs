@@ -4,10 +4,14 @@ using UnityEngine;
 
 public class SpiderProceduralAnimation : MonoBehaviour
 {
+
     public Transform[] legTargets;
-    public float stepSize = 0.15f;
-    public int smoothness = 8;
-    public float stepHeight = 0.15f;
+    [Range(0f,0.2f)]
+    public float stepSize = 0.05f;
+    [Range(0,5f)]
+    public int smoothness = 2;
+    [Range(0,03)]
+    public float stepHeight = 0.1f;
     public float sphereCastRadius = 0.125f;
     public bool bodyOrientation = true;
 
@@ -17,19 +21,21 @@ public class SpiderProceduralAnimation : MonoBehaviour
     private Vector3 lastBodyUp;
     private bool[] legMoving;
     private int nbLegs;
-    
+
     private Vector3 velocity;
     private Vector3 lastVelocity;
     private Vector3 lastBodyPos;
 
     private float velocityMultiplier = 15f;
 
+    public float targetPointSize = 0.1f;
+
     Vector3[] MatchToSurfaceFromAbove(Vector3 point, float halfRange, Vector3 up)
     {
         Vector3[] res = new Vector3[2];
         res[1] = Vector3.zero;
         RaycastHit hit;
-        Ray ray = new Ray(point + halfRange * up / 2f, - up);
+        Ray ray = new Ray(point + halfRange * up / 2f, -up);
 
         if (Physics.SphereCast(ray, sphereCastRadius, out hit, 2f * halfRange))
         {
@@ -42,7 +48,7 @@ public class SpiderProceduralAnimation : MonoBehaviour
         }
         return res;
     }
-    
+
     void Start()
     {
         lastBodyUp = transform.up;
@@ -63,7 +69,7 @@ public class SpiderProceduralAnimation : MonoBehaviour
     IEnumerator PerformStep(int index, Vector3 targetPoint)
     {
         Vector3 startPos = lastLegPositions[index];
-        for(int i = 1; i <= smoothness; ++i)
+        for (int i = 1; i <= smoothness; ++i)
         {
             legTargets[index].position = Vector3.Lerp(startPos, targetPoint, i / (float)(smoothness + 1f));
             legTargets[index].position += transform.up * Mathf.Sin(i / (float)(smoothness + 1f) * Mathf.PI) * stepHeight;
@@ -74,7 +80,7 @@ public class SpiderProceduralAnimation : MonoBehaviour
         legMoving[0] = false;
     }
 
-
+    public Vector3[] desiredPositions = new Vector3[8];
     void FixedUpdate()
     {
         velocity = transform.position - lastBodyPos;
@@ -84,9 +90,8 @@ public class SpiderProceduralAnimation : MonoBehaviour
             velocity = lastVelocity;
         else
             lastVelocity = velocity;
-        
-        
-        Vector3[] desiredPositions = new Vector3[nbLegs];
+
+        desiredPositions = new Vector3[nbLegs];
         int indexToMove = -1;
         float maxDistance = stepSize;
         for (int i = 0; i < nbLegs; ++i)
@@ -109,10 +114,10 @@ public class SpiderProceduralAnimation : MonoBehaviour
             Vector3 targetPoint = desiredPositions[indexToMove] + Mathf.Clamp(velocity.magnitude * velocityMultiplier, 0.0f, 1.5f) * (desiredPositions[indexToMove] - legTargets[indexToMove].position) + velocity * velocityMultiplier;
 
             Vector3[] positionAndNormalFwd = MatchToSurfaceFromAbove(targetPoint + velocity * velocityMultiplier, raycastRange, (transform.parent.up - velocity * 100).normalized);
-            Vector3[] positionAndNormalBwd = MatchToSurfaceFromAbove(targetPoint + velocity * velocityMultiplier, raycastRange*(1f + velocity.magnitude), (transform.parent.up + velocity * 75).normalized);
-            
+            Vector3[] positionAndNormalBwd = MatchToSurfaceFromAbove(targetPoint + velocity * velocityMultiplier, raycastRange * (1f + velocity.magnitude), (transform.parent.up + velocity * 75).normalized);
+
             legMoving[0] = true;
-            
+
             if (positionAndNormalFwd[1] == Vector3.zero)
             {
                 StartCoroutine(PerformStep(indexToMove, positionAndNormalBwd[0]));
@@ -136,12 +141,17 @@ public class SpiderProceduralAnimation : MonoBehaviour
         }
     }
 
-    private void OnDrawGizmosSelected()
+    private void OnDrawGizmos()
     {
         for (int i = 0; i < nbLegs; ++i)
         {
+
+            if(desiredPositions.Length <= 0)
+                return;
             Gizmos.color = Color.red;
-            Gizmos.DrawWireSphere(legTargets[i].position, 0.05f);
+            //Gizmos.DrawWireSphere(legTargets[i].position, targetPointSize);
+            Gizmos.color = Color.cyan;
+            Gizmos.DrawSphere(desiredPositions[i], targetPointSize);
             Gizmos.color = Color.green;
             Gizmos.DrawWireSphere(transform.TransformPoint(defaultLegPositions[i]), stepSize);
         }
