@@ -6,17 +6,20 @@ public class SpiderProceduralAnimation : MonoBehaviour
 {
 
     public Transform[] legTargets;
-    [Range(0f,0.2f)]
+    [Range(0f, 0.2f)]
     public float stepSize = 0.05f;
-    [Range(0,5f)]
+    [Range(0, 5f)]
     public int smoothness = 2;
-    [Range(0,03)]
+    [Range(0, 03)]
     public float stepHeight = 0.1f;
     public float sphereCastRadius = 0.125f;
     public bool bodyOrientation = true;
 
     public float raycastRange = 1.5f;
     private Vector3[] defaultLegPositions;
+    /// <summary>
+    /// The last valid leg Position in the player's local space.
+    /// </summary>
     private Vector3[] lastLegPositions;
     private Vector3 lastBodyUp;
     private bool[] legMoving;
@@ -97,6 +100,8 @@ public class SpiderProceduralAnimation : MonoBehaviour
             lastVelocity = velocity;
 
         desiredPositions = new Vector3[nbLegs];
+        
+        // defaulting this to minus one will have the legs standstill if all target positions are met. 
         int indexToMove = -1;
         float maxDistance = stepSize;
         for (int i = 0; i < nbLegs; ++i)
@@ -151,12 +156,12 @@ public class SpiderProceduralAnimation : MonoBehaviour
         for (int i = 0; i < nbLegs; ++i)
         {
 
-            if(desiredPositions.Length <= 0)
+            if (desiredPositions.Length <= 0)
                 return;
             Gizmos.color = Color.red;
-            //Gizmos.DrawWireSphere(legTargets[i].position, targetPointSize);
+            Gizmos.DrawWireSphere(legTargets[i].position, targetPointSize);
             Gizmos.color = Color.cyan;
-            Gizmos.DrawSphere(desiredPositions[i], targetPointSize);
+            // Gizmos.DrawSphere(desiredPositions[i], targetPointSize);
             Gizmos.color = Color.green;
             Gizmos.DrawWireSphere(transform.TransformPoint(defaultLegPositions[i]), stepSize);
         }
