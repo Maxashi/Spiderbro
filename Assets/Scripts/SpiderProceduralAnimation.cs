@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -66,14 +66,19 @@ public class SpiderProceduralAnimation : MonoBehaviour
         lastBodyPos = transform.position;
     }
 
+    public bool immediateStep;
     IEnumerator PerformStep(int index, Vector3 targetPoint)
     {
+
         Vector3 startPos = lastLegPositions[index];
-        for (int i = 1; i <= smoothness; ++i)
+        if (!immediateStep)
+        {
+            for (int i = 1; i <= smoothness; ++i)
         {
             legTargets[index].position = Vector3.Lerp(startPos, targetPoint, i / (float)(smoothness + 1f));
             legTargets[index].position += transform.up * Mathf.Sin(i / (float)(smoothness + 1f) * Mathf.PI) * stepHeight;
             yield return new WaitForFixedUpdate();
+            }
         }
         legTargets[index].position = targetPoint;
         lastLegPositions[index] = legTargets[index].position;
