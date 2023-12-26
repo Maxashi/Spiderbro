@@ -7,7 +7,7 @@ public class SpiderLegPropertyDrawer : PropertyDrawer
 {
     public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
     {
-        return EditorGUIUtility.singleLineHeight * 10; // Adjust as needed
+        return EditorGUIUtility.singleLineHeight * 6; // Adjust as needed
     }
 
     public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
@@ -21,10 +21,7 @@ public class SpiderLegPropertyDrawer : PropertyDrawer
 
         var defaultSize = position.size;
 
-        // Customize how you want to display the properties
-        // (e.g., use EditorGUI.PropertyField to create fields)
-
-        position.size = new Vector2(position.size.x, 22);
+        position.size = new Vector2(position.size.x, EditorGUIUtility.singleLineHeight);
         EditorGUI.PropertyField(position, legTargetProp);
         position.size = defaultSize;
         position.y += EditorGUIUtility.singleLineHeight;
@@ -37,7 +34,6 @@ public class SpiderLegPropertyDrawer : PropertyDrawer
 
         position.size = new Vector2(position.size.x, 22);
         EditorGUI.PropertyField(position, isMovingProp);
-        EditorGUI.EndProperty();
     }
 }
 #endif

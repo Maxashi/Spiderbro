@@ -1625,12 +1625,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0b3908dea2e97934d9ade96e8a037b89, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  leg1:
-    legTarget: {fileID: 7802298188250223727}
-    desiredLegPosition: {x: 0, y: 0, z: 0}
-    lastLegPosition: {x: 0, y: 0, z: 0}
-    defaultLegPosition: {x: 0, y: 0, z: 0}
-    isMoving: 0
   Legs: []
   legTargets:
   - {fileID: 4297496469094272740}
@@ -1668,12 +1662,7 @@ MonoBehaviour:
   - {x: 0, y: 0, z: 0}
   - {x: 0, y: 0, z: 0}
   - {x: 0, y: 0, z: 0}
-  legsToMove:
-  - legTarget: {fileID: 0}
-    desiredLegPosition: {x: 0, y: 0, z: 0}
-    lastLegPosition: {x: 0, y: 0, z: 0}
-    defaultLegPosition: {x: 0, y: 0, z: 0}
-    isMoving: 0
+  legsToMove: []
 --- !u!4 &5031623299185738299 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 8387291188212796837, guid: ae62a3c586692c640982b6ce5a73a939,
