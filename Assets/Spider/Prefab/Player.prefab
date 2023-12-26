@@ -88,7 +88,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0.000000059604638, y: -0.000000057951908, z: 0.00000014050467,
     w: 1}
-  m_LocalPosition: {x: 0.11251038, y: 0.003835382, z: -0.084997036}
+  m_LocalPosition: {x: 0.0845, y: 0.003835382, z: -0.0744}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -656,7 +656,7 @@ Transform:
   m_GameObject: {fileID: 5028533040059039616}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0.1223, y: 0, z: 0.031100001}
+  m_LocalPosition: {x: -0.1418, y: 0, z: 0.0186}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1048,7 +1048,7 @@ Transform:
   m_GameObject: {fileID: 6972533590090098007}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0.07530345, y: -0.0002, z: -0.13139999}
+  m_LocalPosition: {x: 0.0628, y: -0.0002, z: -0.1036}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1136,7 +1136,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0.00000005960463, y: -0.00000003029305, z: -0.0000000873517,
     w: 1}
-  m_LocalPosition: {x: 0.12075512, y: 0.0065886807, z: 0.03163719}
+  m_LocalPosition: {x: 0.0928, y: 0.0065886807, z: 0.0218}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1168,7 +1168,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0.00000002980233, y: -0.000000026341795, z: -0.00000007022955,
     w: 1}
-  m_LocalPosition: {x: 0.12111064, y: 0.0060106446, z: -0.0087319715}
+  m_LocalPosition: {x: 0.090907186, y: 0.0060106446, z: -0.0203}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1373,7 +1373,7 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: ae62a3c586692c640982b6ce5a73a939,
         type: 3}
       insertIndex: -1
-      addedObject: {fileID: 5597483735756393478}
+      addedObject: {fileID: 8365787149964997257}
     - targetCorrespondingSourceObject: {fileID: -2937023099312764163, guid: ae62a3c586692c640982b6ce5a73a939,
         type: 3}
       insertIndex: -1
@@ -1613,7 +1613,7 @@ MonoBehaviour:
   - m_Rig: {fileID: 1179207074363124932}
     m_Active: 1
   m_Effectors: []
---- !u!114 &5597483735756393478
+--- !u!114 &8365787149964997257
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1622,9 +1622,16 @@ MonoBehaviour:
   m_GameObject: {fileID: 4429052255399228111}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8919d942526ecf04eb2bb9ff8976d485, type: 3}
+  m_Script: {fileID: 11500000, guid: 0b3908dea2e97934d9ade96e8a037b89, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  leg1:
+    legTarget: {fileID: 7802298188250223727}
+    desiredLegPosition: {x: 0, y: 0, z: 0}
+    lastLegPosition: {x: 0, y: 0, z: 0}
+    defaultLegPosition: {x: 0, y: 0, z: 0}
+    isMoving: 0
+  Legs: []
   legTargets:
   - {fileID: 4297496469094272740}
   - {fileID: 6643596648998155391}
@@ -1634,15 +1641,39 @@ MonoBehaviour:
   - {fileID: 3061754300085962665}
   - {fileID: 7053922187833618456}
   - {fileID: 4598533791586320512}
-  stepSize: 0.12
-  smoothness: 4
-  stepHeight: 0.05
-  sphereCastRadius: 0.15
+  maxStepDistance: 0
+  smoothness: 2
+  stepHeight: 0.1
+  stepSize: 0.05
+  progress: 0
+  distanceTraveled: 0
+  indexToMove: -1
+  gait:
+    serializedVersion: 2
+    m_Curve: []
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  sphereCastRadius: 0.125
   bodyOrientation: 0
   raycastRange: 1.5
-  targetPointSize: 0.03
-  legDebugMask: 0
-  desiredPositions: []
+  targetPointSize: 0.1
+  immediateStep: 0
+  desiredPositions:
+  - {x: 0, y: 0, z: 0}
+  - {x: 0, y: 0, z: 0}
+  - {x: 0, y: 0, z: 0}
+  - {x: 0, y: 0, z: 0}
+  - {x: 0, y: 0, z: 0}
+  - {x: 0, y: 0, z: 0}
+  - {x: 0, y: 0, z: 0}
+  - {x: 0, y: 0, z: 0}
+  legsToMove:
+  - legTarget: {fileID: 0}
+    desiredLegPosition: {x: 0, y: 0, z: 0}
+    lastLegPosition: {x: 0, y: 0, z: 0}
+    defaultLegPosition: {x: 0, y: 0, z: 0}
+    isMoving: 0
 --- !u!4 &5031623299185738299 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 8387291188212796837, guid: ae62a3c586692c640982b6ce5a73a939,
