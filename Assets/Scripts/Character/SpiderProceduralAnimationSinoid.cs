@@ -1,15 +1,17 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.Rendering;
 
 public class SpiderProceduralAnimationSinoid : MonoBehaviour
 {
+    [SerializeField]
+    public Transform PlayerTransform;
     public SpiderLeg[] Legs;
     public Transform[] legTargets;
     [Range(0, 1.5f)]
     public float maxStepDistance;
-    [Range(0, 5f)]
     public int smoothness = 2;
     [Range(0, 03)]
     public float stepHeight = 0.1f;
@@ -18,6 +20,7 @@ public class SpiderProceduralAnimationSinoid : MonoBehaviour
     public float progress;
     public float distanceTraveled;
     public int indexToMove = -1;
+    private int lastIndexToMove;
     public AnimationCurve gait;
     public float sphereCastRadius = 0.125f;
     public bool bodyOrientation = true;
@@ -74,9 +77,7 @@ public class SpiderProceduralAnimationSinoid : MonoBehaviour
         else
             lastVelocity = velocity;
 
-        // defaulting this to minus one will have the legs standstill if all target positions are met
         float maxDistance = stepSize;
-
 
         // loop over all legs to find the ones to move based on their distance to the desired position
         for (int i = 0; i < nbLegs; ++i)
@@ -84,60 +85,51 @@ public class SpiderProceduralAnimationSinoid : MonoBehaviour
             Legs[i].desiredLegPosition = transform.TransformPoint(Legs[i].defaultLegPosition);
 
             float distance = Vector3.ProjectOnPlane(desiredPositions[i] + velocity * velocityMultiplier - Legs[i].lastLegPosition, transform.up).magnitude;
-            if (legsToMove.Count > 3)
-            {
-                maxDistance = distance;
 
-                //Add this to the list of legs to move
-                if (legsToMove.Contains(Legs[i]) == false)
+            // Put the leg in to list of legs to move when its not full
+            // and the distance is larger than stepsize
+            if (distance >= stepSize)
+            {
+                if (legsToMove.Count <= 3 && legsToMove.Contains(Legs[i]) == false)
                 {
                     legsToMove.Add(Legs[i]);
-                    Legs[i].isMoving = true;
                 }
             }
             else
             {
-                if (legsToMove.Contains(Legs[i]) == false)
+                if (legsToMove.Contains(Legs[i]) == true)
                 {
                     legsToMove.Remove(Legs[i]);
                 }
             }
         }
 
-        // Set all not-to-move legs to their last position, making them standstill
-        for (int i = 0; i < nbLegs; ++i)
-            if (legsToMove.Contains(Legs[i]) == false)
-                legTargets[i].position = Legs[i].lastLegPosition;
+        // Calculate 
+        indexToMove = Mathf.FloorToInt(progress * nbLegs);
 
-
-        // this was previously not looped by leg, it is design to walk a single leg at a time
-        for (int i = 0; i < nbLegs; ++i)
+        //Check if index is set to new value this frame and if it is still moving
+        if (indexToMove != -1 && indexToMove != lastIndexToMove)
         {
+            Vector3 targetPoint = Legs[indexToMove].desiredLegPosition + Mathf.Clamp(velocity.magnitude * velocityMultiplier, 0.0f, stepSize) * (Legs[indexToMove].desiredLegPosition - Legs[indexToMove].legTarget.position) + velocity * velocityMultiplier;
 
-            // Calculate 
-            indexToMove = Mathf.FloorToInt(progress * nbLegs);
+            Vector3[] positionAndNormalFwd = MatchToSurfaceFromAbove(targetPoint + velocity * velocityMultiplier, raycastRange, (transform.parent.up - velocity * 100).normalized);
+            Vector3[] positionAndNormalBwd = MatchToSurfaceFromAbove(targetPoint + velocity * velocityMultiplier, raycastRange * (1f + velocity.magnitude), (transform.parent.up + velocity * 75).normalized);
 
-            if (indexToMove != -1 && legsToMove.Contains(Legs[i]) && Legs[i].isMoving == false)
+            Legs[indexToMove].isMoving = true;
+
+            if (positionAndNormalFwd[1] == Vector3.zero)
             {
-                Vector3 targetPoint = Legs[i].desiredLegPosition + Mathf.Clamp(velocity.magnitude * velocityMultiplier, 0.0f, stepSize) * (Legs[i].desiredLegPosition - Legs[i].legTarget.position) + velocity * velocityMultiplier;
-
-                Vector3[] positionAndNormalFwd = MatchToSurfaceFromAbove(targetPoint + velocity * velocityMultiplier, raycastRange, (transform.parent.up - velocity * 100).normalized);
-                Vector3[] positionAndNormalBwd = MatchToSurfaceFromAbove(targetPoint + velocity * velocityMultiplier, raycastRange * (1f + velocity.magnitude), (transform.parent.up + velocity * 75).normalized);
-
-                Legs[i].isMoving = true;
-
-                if (positionAndNormalFwd[1] == Vector3.zero)
-                {
-                    StartCoroutine(PerformStep(Legs[i], indexToMove, positionAndNormalBwd[0]));
-                }
-                else
-                {
-                    StartCoroutine(PerformStep(Legs[i], indexToMove, positionAndNormalFwd[0]));
-                }
+                StartCoroutine(PerformStep(Legs[indexToMove], indexToMove, positionAndNormalBwd[0]));
+            }
+            else
+            {
+                StartCoroutine(PerformStep(Legs[indexToMove], indexToMove, positionAndNormalFwd[0]));
             }
         }
 
+
         lastBodyPos = transform.position;
+        lastIndexToMove = indexToMove;
         if (nbLegs > 3 && bodyOrientation)
         {
             Vector3 v1 = Legs[0].legTarget.position - Legs[1].legTarget.position;
@@ -152,21 +144,34 @@ public class SpiderProceduralAnimationSinoid : MonoBehaviour
 
     IEnumerator PerformStep(SpiderLeg leg, int index, Vector3 targetPoint)
     {
+        Debug.Log($"start moving leg {indexToMove}");
+        leg.isMoving = true;
 
         Vector3 startPos = leg.lastLegPosition;
-        if (!immediateStep)
+
+        for (int i = 1; i <= smoothness; ++i)
         {
-            for (int i = 1; i <= smoothness; ++i)
+            legTargets[index].position = Vector3.Lerp(startPos, targetPoint, i / (float)(smoothness + 1f));
+            leg.legTarget.position += transform.up * Mathf.Sin(i / (float)(smoothness + 1f) * Mathf.PI) * stepHeight;
+
+            if (i == smoothness)
             {
-                // legTargets[index].position = Vector3.Lerp(startPos, targetPoint, i / (float)(smoothness + 1f));
-                leg.legTarget.position += transform.up * Mathf.Sin(i / (float)(smoothness + 1f) * Mathf.PI) * stepHeight;
-                yield return new WaitForFixedUpdate();
+                leg.legTarget.position = targetPoint;
+                leg.lastLegPosition = leg.legTarget.position;
+                leg.isMoving = false;
+                if (legsToMove.Contains(leg) == true)
+                {
+                    legsToMove.Remove(leg);
+                }
+                Debug.Log($"finished moving leg {indexToMove}");
             }
+
+            yield return new WaitForFixedUpdate();
         }
-        leg.legTarget.position = targetPoint;
-        leg.lastLegPosition = leg.legTarget.position;
-        leg.isMoving = false;
+
+        yield return new WaitForFixedUpdate();
     }
+
     Vector3[] MatchToSurfaceFromAbove(Vector3 point, float halfRange, Vector3 up)
     {
         Vector3[] res = new Vector3[2];
@@ -187,16 +192,19 @@ public class SpiderProceduralAnimationSinoid : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        for (int i = 0; i < nbLegs; ++i)
-        {
 
-            if (desiredPositions.Length <= 0)
+        for (int i = 0; i < Legs.Length; ++i)
+        {
+            var leg = Legs[i];
+            if (leg.legTarget == null)
                 return;
+
             Gizmos.color = Color.red;
-            Gizmos.DrawWireSphere(Legs[i].legTarget.position, targetPointSize);
+            Gizmos.DrawWireSphere(leg.legTarget.position, targetPointSize);
             Gizmos.color = Color.cyan;
-            // Gizmos.DrawSphere(desiredPositions[i], targetPointSize);
+            Gizmos.DrawSphere(leg.desiredLegPosition, targetPointSize);
             Gizmos.color = Color.green;
+            Gizmos.DrawWireSphere(transform.TransformPoint(leg.defaultLegPosition), stepSize);
         }
     }
 }

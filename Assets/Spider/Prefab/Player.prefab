@@ -1625,6 +1625,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0b3908dea2e97934d9ade96e8a037b89, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  PlayerTransform: {fileID: 473434414266159022}
   Legs: []
   legTargets:
   - {fileID: 4297496469094272740}
@@ -1651,7 +1652,7 @@ MonoBehaviour:
   sphereCastRadius: 0.125
   bodyOrientation: 0
   raycastRange: 1.5
-  targetPointSize: 0.1
+  targetPointSize: 0.01
   immediateStep: 0
   desiredPositions:
   - {x: 0, y: 0, z: 0}
