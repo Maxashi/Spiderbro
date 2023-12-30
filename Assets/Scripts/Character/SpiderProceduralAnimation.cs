@@ -1,14 +1,15 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using DG.Tweening;
 
 public class SpiderProceduralAnimation : MonoBehaviour
 {
     public Transform[] legTargets;
-    [Range(0f, 0.2f)] public float stepSize = 0.05f;
-    [Range(0, 0.15f)] public float maxStepDistance;
+    [Range(0f, 0.5f)] public float stepSize = 0.05f;
+    [Range(0, 0.5f)] public float maxStepDistance;
     [Range(0, 5)] public int smoothness = 2;
-    [Range(0, 0.3f)] public float stepHeight = 0.1f;
+    [Range(0, 1f)] public float stepHeight = 0.1f;
     public float sphereCastRadius = 0.125f;
     public bool bodyOrientation = true;
 
@@ -72,7 +73,8 @@ public class SpiderProceduralAnimation : MonoBehaviour
         }
         legTargets[index].position = targetPoint;
         lastLegPositions[index] = legTargets[index].position;
-        legMoving[index] = false;
+        // unmark leg as 'to move' as we begin animating a stride
+        legsToMove[index] = false;
     }
 
     public Vector3[] desiredPositions = new Vector3[8];
@@ -105,9 +107,8 @@ public class SpiderProceduralAnimation : MonoBehaviour
             }
             else
             {
-                // legsToMove[i] = false;
+                legsToMove[i] = false;
             }
-
         }
 
         // Set all not-to-move legs to their last position, making them standstill
@@ -118,17 +119,15 @@ public class SpiderProceduralAnimation : MonoBehaviour
             else
             {
                 // check if whe should move at all with indexToMove 
-                // and then check if we have a leg that should move but does not
-
-                if (indexToMove != -1 && legsToMove[i] == true && legMoving[i] == false)
+                // and then check if we have a leg that should move next.
+                if (indexToMove != -1 && legsToMove[i] == true)
                 {
+                    legsToMove[i] = false;
 
                     Vector3 targetPoint = desiredPositions[i] + Mathf.Clamp(velocity.magnitude * velocityMultiplier, 0.0f, maxStepDistance) * (desiredPositions[indexToMove] - legTargets[indexToMove].position) + velocity * velocityMultiplier;
 
                     Vector3[] positionAndNormalFwd = MatchToSurfaceFromAbove(targetPoint + velocity * velocityMultiplier, raycastRange, (transform.parent.up - velocity * 100).normalized);
                     Vector3[] positionAndNormalBwd = MatchToSurfaceFromAbove(targetPoint + velocity * velocityMultiplier, raycastRange * (1f + velocity.magnitude), (transform.parent.up + velocity * 75).normalized);
-
-                    legMoving[i] = true;
 
                     if (positionAndNormalFwd[1] == Vector3.zero)
                     {
@@ -162,10 +161,8 @@ public class SpiderProceduralAnimation : MonoBehaviour
 
             if (desiredPositions.Length <= 0)
                 return;
-            Gizmos.color = Color.red;
-            Gizmos.DrawWireSphere(legTargets[i].position, targetPointSize);
             Gizmos.color = Color.cyan;
-            // Gizmos.DrawSphere(desiredPositions[i], targetPointSize);
+            Gizmos.DrawWireSphere(desiredPositions[i], targetPointSize);
             Gizmos.color = Color.green;
             Gizmos.DrawWireSphere(transform.TransformPoint(defaultLegPositions[i]), stepSize);
         }

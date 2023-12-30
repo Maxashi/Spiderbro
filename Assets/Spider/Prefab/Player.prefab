@@ -1373,7 +1373,7 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: ae62a3c586692c640982b6ce5a73a939,
         type: 3}
       insertIndex: -1
-      addedObject: {fileID: 8365787149964997257}
+      addedObject: {fileID: 5908962168512254775}
     - targetCorrespondingSourceObject: {fileID: -2937023099312764163, guid: ae62a3c586692c640982b6ce5a73a939,
         type: 3}
       insertIndex: -1
@@ -1613,7 +1613,7 @@ MonoBehaviour:
   - m_Rig: {fileID: 1179207074363124932}
     m_Active: 1
   m_Effectors: []
---- !u!114 &8365787149964997257
+--- !u!114 &5908962168512254775
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1622,11 +1622,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 4429052255399228111}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0b3908dea2e97934d9ade96e8a037b89, type: 3}
+  m_Script: {fileID: 11500000, guid: 8919d942526ecf04eb2bb9ff8976d485, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  PlayerTransform: {fileID: 473434414266159022}
-  Legs: []
   legTargets:
   - {fileID: 4297496469094272740}
   - {fileID: 6643596648998155391}
@@ -1636,24 +1634,15 @@ MonoBehaviour:
   - {fileID: 3061754300085962665}
   - {fileID: 7053922187833618456}
   - {fileID: 4598533791586320512}
-  maxStepDistance: 0
-  smoothness: 2
-  stepHeight: 0.1
   stepSize: 0.05
-  progress: 0
-  distanceTraveled: 0
-  indexToMove: -1
-  gait:
-    serializedVersion: 2
-    m_Curve: []
-    m_PreInfinity: 2
-    m_PostInfinity: 2
-    m_RotationOrder: 4
+  maxStepDistance: 0.029
+  smoothness: 2
+  stepHeight: 0.048
   sphereCastRadius: 0.125
-  bodyOrientation: 0
+  bodyOrientation: 1
   raycastRange: 1.5
+  velocityMultiplier: 15
   targetPointSize: 0.01
-  immediateStep: 0
   desiredPositions:
   - {x: 0, y: 0, z: 0}
   - {x: 0, y: 0, z: 0}
@@ -1663,7 +1652,7 @@ MonoBehaviour:
   - {x: 0, y: 0, z: 0}
   - {x: 0, y: 0, z: 0}
   - {x: 0, y: 0, z: 0}
-  legsToMove: []
+  legsToMove: 0000000000000000
 --- !u!4 &5031623299185738299 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 8387291188212796837, guid: ae62a3c586692c640982b6ce5a73a939,
