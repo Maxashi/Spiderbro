@@ -24,12 +24,12 @@ public class SpiderAnimation : MonoBehaviour
         velocity = (velocity + smoothness * lastVelocity) / (smoothness + 1f);
 
         if (velocity < 0.000025f)
-            velocity = lastVelocity;
+            velocity = 0;
         else
             lastVelocity = velocity;
-
-
         playerAnimator.speed = velocity * speed;
+        playerAnimator.SetFloat("velocity", velocity * speed);
+
 
         lastBodyPos = transform.position;
     }
