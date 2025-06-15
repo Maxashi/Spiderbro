@@ -11,7 +11,7 @@ using UnityEngine;
 public class SpiderController : MonoBehaviour
 {
     // Movement parameters
-    public float _speed = 3f;                    // Base movement speed
+    public float _speed = 0.53f;                    // Base movement speed
     public float smoothness = 5f;                // Movement and rotation smoothing factor
     
     // Surface normal sampling parameters
@@ -132,7 +132,8 @@ public class SpiderController : MonoBehaviour
             
             // Cast first ring of rays (inner ring)
             Ray ray = new Ray(point - (dir + largener) * halfRange + largener.normalized * offset1 / 100f, dir);
-            Debug.DrawRay(ray.origin, ray.direction);
+            // Visualize ray with fixed length for clarity
+            Debug.DrawLine(ray.origin, ray.origin + ray.direction * halfRange, Color.white);
             if (Physics.SphereCast(ray, 0.01f, out hit, 2f * halfRange))
             {
                 // Weight normal based on distance - closer hits have more influence
@@ -145,7 +146,7 @@ public class SpiderController : MonoBehaviour
 
             // Cast second ring of rays (outer ring)
             ray = new Ray(point - (dir + largener) * halfRange + largener.normalized * offset2 / 100f, dir);
-            Debug.DrawRay(ray.origin, ray.direction, Color.green);
+            Debug.DrawLine(ray.origin, ray.origin + ray.direction * halfRange, Color.green);
             if (Physics.SphereCast(ray, 0.01f, out hit, 2f * halfRange))
             {
                 float weight = 1.0f - (hit.distance / (2f * halfRange));
@@ -184,6 +185,9 @@ public class SpiderController : MonoBehaviour
     /// </summary>
     void FixedUpdate()
     {
+        // Visualize the current upward direction
+        Debug.DrawLine(transform.position, transform.position + upward * 2f, Color.blue);
+
         // Update velocity with smoothing
         velocity = (smoothness * velocity + (transform.position - lastPosition)) / (1f + smoothness);
         if (velocity.magnitude < 0.00025f)
