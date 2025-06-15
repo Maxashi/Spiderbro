@@ -37,7 +37,7 @@ public class SpiderController : MonoBehaviour
         res[8] = (new Vector3(t, -1, 0));
         res[9] = (new Vector3(1, 0, -t));
         res[10] = (new Vector3(0, t, 1));
-        res[11] =(new Vector3(0, -t, -1));
+        res[11] = (new Vector3(0, -t, -1));
 
         return res;
     }
@@ -54,7 +54,7 @@ public class SpiderController : MonoBehaviour
         foreach (Vector3 dir in dirs)
         {
             RaycastHit hit;
-            Ray ray = new Ray(point + up*0.15f, dir);
+            Ray ray = new Ray(point + up * 0.15f, dir);
             //Debug.DrawRay(ray.origin, ray.direction);
             if (Physics.SphereCast(ray, 0.01f, out hit, 2f * halfRange))
             {
@@ -78,7 +78,7 @@ public class SpiderController : MonoBehaviour
         Vector3[] dirs = new Vector3[rayAmount];
         float angularStep = 2f * Mathf.PI / (float)rayAmount;
         float currentAngle = angularStep / 2f;
-        for(int i = 0; i < rayAmount; ++i)
+        for (int i = 0; i < rayAmount; ++i)
         {
             dirs[i] = -up + (right * Mathf.Cos(currentAngle) + forward * Mathf.Sin(currentAngle)) * eccentricity;
             currentAngle += angularStep;
@@ -89,7 +89,7 @@ public class SpiderController : MonoBehaviour
             RaycastHit hit;
             Vector3 largener = Vector3.ProjectOnPlane(dir, up);
             Ray ray = new Ray(point - (dir + largener) * halfRange + largener.normalized * offset1 / 100f, dir);
-            //Debug.DrawRay(ray.origin, ray.direction);
+            Debug.DrawRay(ray.origin, ray.direction);
             if (Physics.SphereCast(ray, 0.01f, out hit, 2f * halfRange))
             {
                 res[0] += hit.point;
@@ -98,12 +98,12 @@ public class SpiderController : MonoBehaviour
                 positionAmount += 1;
             }
             ray = new Ray(point - (dir + largener) * halfRange + largener.normalized * offset2 / 100f, dir);
-            //Debug.DrawRay(ray.origin, ray.direction, Color.green);
+            Debug.DrawRay(ray.origin, ray.direction, Color.green);
             if (Physics.SphereCast(ray, 0.01f, out hit, 2f * halfRange))
             {
                 res[0] += hit.point;
                 res[1] += hit.normal;
-                normalAmount   += 1;
+                normalAmount += 1;
                 positionAmount += 1;
             }
         }
@@ -130,17 +130,33 @@ public class SpiderController : MonoBehaviour
             velocity = lastVelocity;
         lastPosition = transform.position;
         lastVelocity = velocity;
-        
+
         float multiplier = 1f;
         if (Input.GetKey(KeyCode.LeftShift))
             multiplier = 2f;
 
-        float valueY = Input.GetAxis("Vertical");
-        if (valueY != 0)
-            transform.position += transform.forward * valueY * _speed * multiplier * Time.fixedDeltaTime;
-        float valueX = Input.GetAxis("Horizontal");
-        if (valueX != 0)
-            transform.position += Vector3.Cross(transform.up, transform.forward) * valueX * _speed * multiplier * Time.fixedDeltaTime;
+        float valueY, valueX;
+        valueY = Input.GetAxis("Vertical");
+        valueX = Input.GetAxis("Horizontal");
+
+        //assuming we only using the single camera:
+        var camera = Camera.main;
+
+        //camera forward and right vectors:
+        var forward = camera.transform.forward;
+        var right = camera.transform.right;
+
+        //project forward and right vectors on the horizontal plane (y = 0)
+        forward.y = 0f;
+        right.y = 0f;
+        forward.Normalize();
+        right.Normalize();
+
+        //this is the direction in the world space we want to move:
+        var desiredMoveDirection = forward * valueY + right * valueX;
+
+        //now we can apply the movement:
+        transform.Translate(desiredMoveDirection * Time.deltaTime);
 
         if (valueX != 0 || valueY != 0)
         {
@@ -152,7 +168,7 @@ public class SpiderController : MonoBehaviour
             Vector3[] pos = GetClosestPoint(transform.position, transform.forward, transform.up, 0.5f, raysEccentricity, innerRaysOffset, outerRaysOffset, raysNb);
             transform.position = Vector3.Lerp(lastPosition, pos[0], 1f / (1f + smoothness));
 
-            forward = velocity.normalized;
+            forward = desiredMoveDirection.normalized;
             Quaternion q = Quaternion.LookRotation(forward, upward);
             transform.rotation = Quaternion.Lerp(lastRot, q, 1f / (1f + smoothness));
         }
