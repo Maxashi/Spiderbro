@@ -149,7 +149,7 @@ public class ImprovedWallWalker : MonoBehaviour
     {
         m_groundCheckRadius = characterHeight * groundCheckRadius; // Adjusted for gravity influence
         m_groundCheckDistance = characterHeight * groundCheckDistance;
-        m_sampleRadius =
+        m_sampleRadius = characterHeight * sampleRadius;
     }
 
     void HandleMouseLook()
