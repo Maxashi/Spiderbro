@@ -15,14 +15,12 @@ public static class DebugGizmos
     /// <param name="radius">Radius of the sphere</param>
     /// <param name="color">Color of the sphere (alpha controls transparency)</param>
     /// <param name="subdivisions">Number of icosphere subdivisions (0 = icosahedron, 2 = finer, etc.)</param>
-    public static void DrawIcosphere(Vector3 position, float radius, Color color, int subdivisions = 2)
+    public static void DrawIcosphere(Vector3 position, float radius, Color color, int subdivisions = 1)
     {
 #if UNITY_EDITOR
         Mesh mesh = GenerateIcoSphere(radius, subdivisions);
-        if (mesh == null) return;
         color.a = Mathf.Clamp01(color.a);
-        Gizmos.color = color;
-        Gizmos.DrawMesh(mesh, position);
+        DrawMeshEdges(mesh, position, Quaternion.identity, color);
 #endif
     }
 
@@ -112,4 +110,37 @@ public static class DebugGizmos
         return idx;
     }
 #endif
+
+    /// <summary>
+    /// Draws every edge of a mesh using Debug.DrawLine (runtime only, not Gizmos).
+    /// </summary>
+    /// <param name="mesh">Mesh to draw</param>
+    /// <param name="position">World position offset</param>
+    /// <param name="rotation">World rotation</param>
+    /// <param name="color">Line color</param>
+    public static void DrawMeshEdges(Mesh mesh, Vector3 position, Quaternion rotation, Color color)
+    {
+        if (mesh == null) return;
+        var vertices = mesh.vertices;
+        var triangles = mesh.triangles;
+        var drawnEdges = new System.Collections.Generic.HashSet<ulong>();
+        for (int i = 0; i < triangles.Length; i += 3)
+        {
+            int i0 = triangles[i];
+            int i1 = triangles[i + 1];
+            int i2 = triangles[i + 2];
+            DrawEdge(i0, i1);
+            DrawEdge(i1, i2);
+            DrawEdge(i2, i0);
+        }
+        void DrawEdge(int a, int b)
+        {
+            ulong edgeKey = ((ulong)Mathf.Min(a, b) << 32) | (uint)Mathf.Max(a, b);
+            if (drawnEdges.Contains(edgeKey)) return;
+            drawnEdges.Add(edgeKey);
+            Vector3 v0 = position + rotation * vertices[a];
+            Vector3 v1 = position + rotation * vertices[b];
+            Debug.DrawLine(v0, v1, color);
+        }
+    }
 }
