@@ -9,6 +9,7 @@
 /Assets/AssetStoreTools*
 /Logs
 /Library
+/Assets/TextMesh Pro*
 
 # Visual Studio 2015 cache directory
 /.vs/
@@ -36,4 +37,4 @@ ExportedObj/
 sysinfo.txt
 
 # Builds
-*.apk
+*.apkAssets/TextMesh Pro/Sprites/EmojiOne.png
