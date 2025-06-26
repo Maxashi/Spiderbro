@@ -14,8 +14,8 @@ public static class DebugGizmos
     /// <param name="position">Center of the sphere</param>
     /// <param name="radius">Radius of the sphere</param>
     /// <param name="color">Color of the sphere (alpha controls transparency)</param>
-    /// <param name="subdivisions">Number of icosphere subdivisions (0 = icosahedron, 1 = finer, etc.)</param>
-    public static void Draw(Vector3 position, float radius, Color color, int subdivisions = 1)
+    /// <param name="subdivisions">Number of icosphere subdivisions (0 = icosahedron, 2 = finer, etc.)</param>
+    public static void DrawIcosphere(Vector3 position, float radius, Color color, int subdivisions = 2)
     {
 #if UNITY_EDITOR
         Mesh mesh = GenerateIcoSphere(radius, subdivisions);
@@ -33,10 +33,10 @@ public static class DebugGizmos
     /// <param name="position">Center of the sphere</param>
     /// <param name="radius">Radius of the sphere</param>
     /// <param name="subdivisions">Number of icosphere subdivisions (0 = icosahedron, 1 = finer, etc.)</param>
-    public static void Draw(Vector3 position, float radius, int subdivisions = 1)
+    public static void DrawIcosphere(Vector3 position, float radius, int subdivisions = 1)
     {
 #if UNITY_EDITOR
-        Draw(position, radius, defaultColor, subdivisions);
+        DrawIcosphere(position, radius, defaultColor, subdivisions);
 #endif
     }
 
