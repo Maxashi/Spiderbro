@@ -6,6 +6,8 @@ using UnityEngine;
 /// </summary>
 public class ImprovedWallWalker : MonoBehaviour
 {
+
+    public float characterHeight;
     [Header("Movement Settings")]
     public float moveSpeed = 5f;
     public float jumpForce = 8f;
@@ -69,8 +71,11 @@ public class ImprovedWallWalker : MonoBehaviour
         playerCamera.parent = cameraHolder;
 
         // Lock and hide cursor
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
+        if (!Application.isEditor)
+        {
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
+        }
     }
 
     void InitializeSamplePoints()
@@ -148,13 +153,12 @@ public class ImprovedWallWalker : MonoBehaviour
 
     bool SamplePoint(Vector3 point, out RaycastHit hit)
     {
-        return Physics.SphereCast(
-            point + Vector3.up * groundCheckRadius,
-            groundCheckRadius,
+        var origin = point + Vector3.up * groundCheckRadius;
+
+        return Physics.SphereCast(origin, groundCheckRadius,
             -currentNormal,
             out hit,
-            groundCheckDistance,
-            groundLayer
+            groundCheckDistance
         );
     }
 
