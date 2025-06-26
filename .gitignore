@@ -38,3 +38,6 @@ sysinfo.txt
 
 # Builds
 *.apkAssets/TextMesh Pro/Sprites/EmojiOne.png
+UserSettings/Layouts/CurrentMaximizeLayout.dwlt
+UserSettings/Layouts/*
+/UserSettings/Layouts*
