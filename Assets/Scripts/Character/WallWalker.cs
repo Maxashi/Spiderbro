@@ -19,7 +19,9 @@ public class ImprovedWallWalker : MonoBehaviour
     public float groundCheckDistance = 0.7f;
     public float sampleRadius = 1f;
     public LayerMask groundLayer = -1;
-    public int surfaceSamplePoints = 8;
+    public int numberOfPoints = 8;
+    [SerializeField]
+    private bool circular;
 
     private float m_groundCheckRadius = 0.5f;
     private float m_groundCheckDistance = 0.7f;
@@ -70,7 +72,7 @@ public class ImprovedWallWalker : MonoBehaviour
 
         characterHeight = controller.height;
 
-        surfaceSamplePoints = 8;
+        numberOfPoints = 8;
 
         // Create camera holder
         GameObject holder = new("CameraHolder");
@@ -86,53 +88,138 @@ public class ImprovedWallWalker : MonoBehaviour
             Cursor.visible = false;
         }
     }
+
     /// <summary>
-    /// This function generates sample vectors on a sphere around the character.
-    /// It initializes the samplePoints array with evenly distributed points
-    /// based on the specified surfaceSamplePoints count around the downward normal.
-    /// The points are calculated in a circular pattern around the icosahedron's base.
+    /// Initializes sample points based on the selected sampling method (circular or spherical).
     /// </summary>
-    void InitializeSampleVectors()
-    {
-        samplePoints = new Vector3[surfaceSamplePoints];
-        // Generate sample points on a sphere using the Fibonacci sphere algorithm
-        float phi = Mathf.PI * (Mathf.Sqrt(5f) - 1f); // golden angle in radians
-
-        for (int i = 0; i < surfaceSamplePoints; i++)
-        {
-            float y = 1f - (i / (float)(surfaceSamplePoints - 1)) * 2f; // y goes from 1 to -1
-            float radius = Mathf.Sqrt(1f - y * y); // radius at y
-
-            float theta = phi * i; // golden angle increment
-
-            float x = Mathf.Cos(theta) * radius;
-            float z = Mathf.Sin(theta) * radius;
-
-            samplePoints[i] = new Vector3(x, y, z) * m_sampleRadius;
-        }
-        // Update ground check radius and distance if changed
-        if (m_groundCheckRadius != groundCheckRadius || m_groundCheckDistance != groundCheckDistance)
-        {
-            m_groundCheckRadius = groundCheckRadius;
-            m_groundCheckDistance = groundCheckDistance;
-        }
-
-        // Update sample radius if changed
-        if (m_sampleRadius != sampleRadius)
-        {
-            m_sampleRadius = sampleRadius;
-            InitializeSamplePoints();
-        }
-    }
     void InitializeSamplePoints()
     {
-        samplePoints = new Vector3[surfaceSamplePoints];
-        var angleStep = 360f / surfaceSamplePoints;
-
-        for (int i = 0; i < surfaceSamplePoints; i++)
+        if (circular)
         {
-            var angle = i * angleStep * Mathf.Deg2Rad;
+            InitializeSamplePointsCircular();
+            CheckGroundCircular();
+        }
+        else
+        {
+            InitializeSamplePointsSpherical();
+            CheckGroundSpherical();
+        }
+    }
+
+    private void InitializeSamplePointsCircular()
+    {
+        samplePoints = new Vector3[numberOfPoints];
+        float angleStep = 360f / numberOfPoints;
+
+        for (int i = 0; i < numberOfPoints; i++)
+        {
+            float angle = i * angleStep * Mathf.Deg2Rad;
             samplePoints[i] = new Vector3(Mathf.Cos(angle) * m_sampleRadius, 0f, Mathf.Sin(angle) * m_sampleRadius);
+        }
+    }
+
+    private void InitializeSamplePointsSpherical()
+    {
+        isGrounded = false;
+
+        samplePoints = new Vector3[numberOfPoints];
+        Vector3 down = transform.up * -1f; // Down direction relative to the character
+        Vector3 center = transform.position;
+        Vector3 axis = Vector3.Cross(down, Vector3.forward);
+        if (axis.sqrMagnitude < 0.001f)
+            axis = Vector3.Cross(down, Vector3.right);
+        axis.Normalize();
+
+        float angleStep = 360f / numberOfPoints;
+        for (int i = 0; i < numberOfPoints; i++)
+        {
+            float angle = angleStep * i;
+            Quaternion rot = Quaternion.AngleAxis(angle, down);
+            Vector3 dir = rot * axis;
+            Vector3 pointOnSphere = center + dir * m_sampleRadius;
+            Vector3 normal = (pointOnSphere - center).normalized;
+            samplePoints[i] = normal;
+        }
+    }
+
+    /// <summary>
+    /// This function generates sample vectors on a sphere around the character, centered at the transform's position.
+    /// </summary>
+    void CheckGroundSpherical()
+    {
+        int hitCount = 0;
+        Vector3 averageNormal = Vector3.zero;
+
+        foreach (Vector3 offset in samplePoints)
+        {
+            Vector3 samplePoint = transform.position + transform.TransformDirection(offset);
+            bool isHit = Physics.Raycast(transform.position, samplePoint, out RaycastHit hit, m_groundCheckDistance);
+            if (isHit)
+            {
+                averageNormal += hit.normal;
+                hitCount++;
+            }
+        }
+    }
+
+    void CheckGrounded()
+    {
+        isGrounded = false;
+
+        Vector3 averageNormal = Vector3.zero;
+        int hitCount = 0;
+        // Check center point
+        if (SamplePoint(transform.position, out RaycastHit centerHit))
+        {
+            averageNormal += centerHit.normal;
+            hitCount++;
+        }
+
+        // Check points in a circle around the character
+        foreach (Vector3 offset in samplePoints)
+        {
+            Vector3 samplePoint = transform.position + transform.TransformDirection(offset);
+            if (SamplePoint(samplePoint, out RaycastHit hit))
+            {
+                averageNormal += hit.normal;
+                hitCount++;
+            }
+        }
+
+        // Update surface normal if we found any valid surfaces
+        if (hitCount > 0)
+        {
+            isGrounded = true;
+            Vector3 targetNormal = (averageNormal / hitCount).normalized;
+
+            // Smoothly interpolate to the new normal
+            currentNormal = Vector3.Slerp(currentNormal, targetNormal, Time.deltaTime * rotationSpeed);
+        }
+        else
+        {
+            // When in air, gradually rotate back to world up
+            currentNormal = Vector3.Slerp(currentNormal, Vector3.up, Time.deltaTime * rotationSpeed);
+        }
+    }
+
+    /// <summary>
+    /// This function generates sample points in a circular pattern around the character.
+    void CheckGroundCircular()
+    {
+        isGrounded = false;
+
+        Vector3 averageNormal = Vector3.zero;
+        int hitCount = 0;
+
+        foreach (Vector3 offset in samplePoints)
+        {
+            Vector3 samplePoint = transform.position + transform.TransformDirection(offset);
+            bool isHit = Physics.Raycast(transform.position, samplePoint, out RaycastHit hit, m_groundCheckDistance);
+            if (isHit)
+            {
+                averageNormal += hit.normal;
+                hitCount++;
+            }
         }
     }
 
@@ -147,15 +234,25 @@ public class ImprovedWallWalker : MonoBehaviour
 
     private void CheckUpdatedVariables()
     {
-        m_groundCheckRadius = characterHeight * groundCheckRadius; // Adjusted for gravity influence
-        m_groundCheckDistance = characterHeight * groundCheckDistance;
-        m_sampleRadius = characterHeight * sampleRadius;
+        // Update ground check radius and distance if changed
+        if (m_groundCheckRadius != groundCheckRadius || m_groundCheckDistance != groundCheckDistance)
+        {
+            m_groundCheckRadius = groundCheckRadius;
+            m_groundCheckDistance = groundCheckDistance;
+        }
+
+        // Update sample radius if changed
+        if (m_sampleRadius != sampleRadius)
+        {
+            m_sampleRadius = sampleRadius;
+            InitializeSamplePoints();
+        }
     }
 
     void HandleMouseLook()
     {
-        var mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
-        var mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity;
+        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
+        float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity;
 
         // Vertical rotation (pitch)
         cameraPitch = Mathf.Clamp(cameraPitch - mouseY, -maxLookAngle, maxLookAngle);
@@ -165,59 +262,19 @@ public class ImprovedWallWalker : MonoBehaviour
         transform.Rotate(Vector3.up * mouseX);
     }
 
-    void CheckGrounded()
-    {
-        isGrounded = false;
-        var averageNormal = Vector3.zero;
-        var hitCount = 0;
-
-        // Check center point
-        if (SamplePoint(transform.position, out RaycastHit centerHit))
-        {
-            averageNormal += centerHit.normal;
-            hitCount++;
-        }
-
-        // Check points in a circle around the character
-        foreach (Vector3 offset in samplePoints)
-        {
-            var samplePoint = transform.position + transform.TransformDirection(offset);
-            if (SamplePoint(samplePoint, out RaycastHit hit))
-            {
-                averageNormal += hit.normal;
-                hitCount++;
-            }
-        }
-
-        // Update surface normal if we found any valid surfaces
-        if (hitCount > 0)
-        {
-            isGrounded = true;
-            var targetNormal = (Vector3.zero / hitCount).normalized;
-
-            // Smoothly interpolate to the new normal
-            currentNormal = Vector3.Slerp(currentNormal, targetNormal, Time.deltaTime * rotationSpeed);
-        }
-        else
-        {
-            // When in air, gradually rotate back to world up
-            currentNormal = Vector3.Slerp(currentNormal, Vector3.up, Time.deltaTime * rotationSpeed);
-        }
-    }
-
     bool SamplePoint(Vector3 point, out RaycastHit hit)
     {
-        var origin = point + Vector3.up * m_groundCheckRadius;
+        Vector3 origin = point + Vector3.up * m_groundCheckRadius;
 
-        var isHit = Physics.SphereCast(origin, m_groundCheckRadius,
+        bool isHit = Physics.SphereCast(origin, m_groundCheckRadius,
             -currentNormal,
             out hit,
             m_groundCheckDistance
         );
 
         Debug.DrawLine(origin, hit.point, Color.cyan);
-        var sampleColor = isHit ? Color.green : Color.red;
-        var radius = isHit ? hit.distance : m_groundCheckDistance;
+        Color sampleColor = isHit ? Color.green : Color.red;
+        float radius = isHit ? hit.distance : m_groundCheckDistance;
         DebugGizmos.DrawIcosphere(hit.point, radius, sampleColor);
 
         return isHit;
@@ -226,14 +283,14 @@ public class ImprovedWallWalker : MonoBehaviour
     void HandleMovement()
     {
         // Get input relative to camera view
-        var horizontal = Input.GetAxis("Horizontal");
-        var vertical = Input.GetAxis("Vertical");
+        float horizontal = Input.GetAxis("Horizontal");
+        float vertical = Input.GetAxis("Vertical");
 
         // Calculate movement direction relative to camera and current surface
-        var cameraForward = Vector3.ProjectOnPlane(playerCamera.forward, currentNormal).normalized;
-        var cameraRight = Vector3.Cross(currentNormal, cameraForward).normalized;
+        Vector3 cameraForward = Vector3.ProjectOnPlane(playerCamera.forward, currentNormal).normalized;
+        Vector3 cameraRight = Vector3.Cross(currentNormal, cameraForward).normalized;
 
-        var moveDirection = (cameraForward * vertical + cameraRight * horizontal).normalized;
+        Vector3 moveDirection = (cameraForward * vertical + cameraRight * horizontal).normalized;
 
         if (isGrounded)
         {
@@ -253,10 +310,9 @@ public class ImprovedWallWalker : MonoBehaviour
             velocity += Physics.gravity * Time.deltaTime;
 
             // Allow some air control
-            var horizontalVelocity = Vector3.ProjectOnPlane(velocity, Vector3.up);
-            var airMove = moveDirection * moveSpeed * 0.5f;
-            velocity = Vector3.Lerp(horizontalVelocity, airMove, Time.deltaTime * 2f)
-                      + Vector3.Project(velocity, Vector3.up);
+            Vector3 horizontalVelocity = Vector3.ProjectOnPlane(velocity, Vector3.up);
+            Vector3 airMove = moveDirection * moveSpeed * 0.5f;
+            velocity = Vector3.Lerp(horizontalVelocity, airMove, Time.deltaTime * 2f) + Vector3.Project(velocity, Vector3.up);
         }
 
         // Move the character
@@ -265,10 +321,8 @@ public class ImprovedWallWalker : MonoBehaviour
         // Align character with surface
         if (moveDirection != Vector3.zero || !isGrounded)
         {
-            Quaternion targetRotation = Quaternion.FromToRotation(transform.up, currentNormal)
-                                      * transform.rotation;
-            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation,
-                                                Time.deltaTime * rotationSpeed);
+            Quaternion targetRotation = Quaternion.FromToRotation(transform.up, currentNormal) * transform.rotation;
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * rotationSpeed);
         }
     }
 
@@ -281,6 +335,20 @@ public class ImprovedWallWalker : MonoBehaviour
         //     var samplePoint = transform.position + transform.TransformDirection(offset);
         //     Debug.DrawLine(samplePoint, samplePoint - currentNormal * m_groundCheckDistance, sampleColor);
         // }
+
+        // Move the scene view camera locked to the character
+#if UNITY_EDITOR
+        if (UnityEditor.SceneView.lastActiveSceneView != null)
+        {
+            Camera sceneCam = UnityEditor.SceneView.lastActiveSceneView.camera;
+            if (sceneCam != null)
+            {
+                UnityEditor.SceneView.lastActiveSceneView.pivot = transform.position + currentNormal * characterHeight;
+                UnityEditor.SceneView.lastActiveSceneView.Repaint();
+            }
+        }
+#endif
+
 
         // Visualize current up direction
         Debug.DrawLine(transform.position, transform.position + currentNormal * 2f, Color.blue);
