@@ -59,6 +59,7 @@ public class ImprovedWallWalker : MonoBehaviour
         {
             UnityEngine.Debug.LogError("ImprovedWallWalker requires a CharacterController component!");
             enabled = false;
+            characterHeight = 0.3f;
             return;
         }
 
@@ -336,7 +337,7 @@ public class ImprovedWallWalker : MonoBehaviour
         // Draw sample points
         if (samplePoints != null)
         {
-            Gizmos.color = Color.green;
+            Gizmos.color = Color.red;
             foreach (Vector3 point in samplePoints)
             {
                 Gizmos.DrawSphere(transform.position + transform.TransformDirection(point), 0.1f);

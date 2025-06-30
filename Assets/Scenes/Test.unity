@@ -184,7 +184,7 @@ Transform:
   m_GameObject: {fileID: 168786684}
   serializedVersion: 2
   m_LocalRotation: {x: 0.21237785, y: 0.000000035593224, z: -0.000000007735681, w: 0.97718763}
-  m_LocalPosition: {x: 0, y: 1.147, z: -2.3270001}
+  m_LocalPosition: {x: 1.862, y: 2.146, z: 0.22599983}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 1
   m_Children:
@@ -804,7 +804,7 @@ Transform:
   m_GameObject: {fileID: 2113980523}
   serializedVersion: 2
   m_LocalRotation: {x: 0.21237785, y: 0.000000035593224, z: -0.000000007735681, w: 0.97718763}
-  m_LocalPosition: {x: 0, y: 1.147, z: -2.3270001}
+  m_LocalPosition: {x: 1.862, y: 2.146, z: 0.22599983}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 1
   m_Children: []
@@ -4004,7 +4004,7 @@ Transform:
   m_GameObject: {fileID: 4770349133119425257}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.027, z: -0.157}
+  m_LocalPosition: {x: 1.862, y: 1.026, z: 2.396}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 1
   m_Children:
@@ -4048,16 +4048,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f3de5e8507ad5f04ca872073fd7b1dc1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  characterHeight: 0
   moveSpeed: 2
   jumpForce: 4
   gravity: 8
   groundCheckRadius: 0.5
   groundCheckDistance: 0.7
+  sampleRadius: 1
   groundLayer:
     serializedVersion: 2
     m_Bits: 4294967295
-  surfaceSamplePoints: 8
-  sampleRadius: 1
+  numberOfPoints: 8
+  circular: 0
   mouseSensitivity: 2
   maxLookAngle: 80
   playerCamera: {fileID: 0}
