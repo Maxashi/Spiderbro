@@ -8,7 +8,7 @@ using UnityEngine;
 public class ImprovedWallWalker : MonoBehaviour
 {
 
-    public float characterHeight;
+    public float characterHeight = 1f;
     [Header("Movement Settings")]
     public float moveSpeed = 5f;
     public float jumpForce = 8f;
@@ -58,8 +58,6 @@ public class ImprovedWallWalker : MonoBehaviour
         if (controller == null)
         {
             UnityEngine.Debug.LogError("ImprovedWallWalker requires a CharacterController component!");
-            enabled = false;
-            characterHeight = 0.3f;
             return;
         }
 
@@ -67,7 +65,6 @@ public class ImprovedWallWalker : MonoBehaviour
         if (playerCamera == null)
         {
             UnityEngine.Debug.LogError("Player camera not assigned!");
-            enabled = false;
             return;
         }
 
@@ -90,65 +87,20 @@ public class ImprovedWallWalker : MonoBehaviour
     }
     #region InitializePoints
     /// <summary>
-    /// Initializes the sample points based on the selected sampling method (circular or spherical).
-    /// </summary>
-    /// <remarks>
-    /// This method is called once at the start to set up the initial sample points.
-    /// It can be called again if the sampling method changes.
-    /// </remarks>
-
-
-    /// <summary>
     /// Initializes sample points based on the selected sampling method (circular or spherical).
     /// </summary>
     void InitializeSamplePoints()
     {
+        isGrounded = false;
         if (circular)
         {
-            InitializeSamplePointsCircular();
+            samplePoints = SamplePattern.Circle(characterHeight, numberOfPoints);
         }
         else
         {
-            InitializeSamplePointsSpherical();
+            samplePoints = SamplePattern.Hemisphere(-transform.up, characterHeight, numberOfPoints);
         }
     }
-
-    private void InitializeSamplePointsCircular()
-    {
-        samplePoints = new Vector3[numberOfPoints];
-        float angleStep = 360f / numberOfPoints;
-
-        for (int i = 0; i < numberOfPoints; i++)
-        {
-            float angle = i * angleStep * Mathf.Deg2Rad;
-            samplePoints[i] = new Vector3(Mathf.Cos(angle) * m_sampleRadius, 0f, Mathf.Sin(angle) * m_sampleRadius);
-        }
-    }
-
-    private void InitializeSamplePointsSpherical()
-    {
-        isGrounded = false;
-
-        samplePoints = new Vector3[numberOfPoints];
-        Vector3 down = transform.up * -1f; // Down direction relative to the character
-        Vector3 center = transform.position;
-        Vector3 axis = Vector3.Cross(down, Vector3.forward);
-        if (axis.sqrMagnitude < 0.001f)
-            axis = Vector3.Cross(down, Vector3.right);
-        axis.Normalize();
-
-        float angleStep = 360f / numberOfPoints;
-        for (int i = 0; i < numberOfPoints; i++)
-        {
-            float angle = angleStep * i;
-            Quaternion rot = Quaternion.AngleAxis(angle, down);
-            Vector3 dir = rot * axis;
-            Vector3 pointOnSphere = center + dir * m_sampleRadius;
-            Vector3 normal = (pointOnSphere - center).normalized;
-            samplePoints[i] = normal;
-        }
-    }
-    #endregion
 
     void Update()
     {
@@ -185,12 +137,11 @@ public class ImprovedWallWalker : MonoBehaviour
         int hitCount = 0;
         var averageNormal = Vector3.zero;
 
-        foreach (Vector3 offset in samplePoints)
+        foreach (Vector3 point in samplePoints)
         {
-            var samplePoint = transform.position + transform.TransformDirection(offset);
-            var invertedCurrentNormal = -currentNormal;
+            var samplePoint = GetLocationAtSamplePoint(point);
 
-            bool isHit = Raycast(transform.position, invertedCurrentNormal, out RaycastHit hit, m_groundCheckDistance);
+            bool isHit = Raycast(transform.position, -currentNormal, out RaycastHit hit, m_groundCheckDistance);
             if (isHit)
             {
                 averageNormal += hit.normal;
@@ -262,7 +213,6 @@ public class ImprovedWallWalker : MonoBehaviour
         transform.Rotate(Vector3.up * mouseX);
     }
 
-
     bool SamplePoint(Vector3 point, out RaycastHit hit)
     {
         Vector3 origin = point + Vector3.up * m_groundCheckRadius;
@@ -327,6 +277,10 @@ public class ImprovedWallWalker : MonoBehaviour
         }
     }
 
+    private Vector3 GetLocationAtSamplePoint(Vector3 point)
+    {
+        return transform.position + transform.TransformDirection(point);
+    }
 
     private void OnDrawGizmos()
     {
@@ -340,7 +294,7 @@ public class ImprovedWallWalker : MonoBehaviour
             Gizmos.color = Color.red;
             foreach (Vector3 point in samplePoints)
             {
-                Gizmos.DrawSphere(transform.position + transform.TransformDirection(point), 0.1f);
+                Gizmos.DrawSphere(GetLocaationAtSamplePoint(point), 0.1f);
             }
         }
     }
