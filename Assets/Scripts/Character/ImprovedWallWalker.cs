@@ -18,6 +18,7 @@ public class ImprovedWallWalker : MonoBehaviour
     public float groundCheckDistance = 0.7f;
     public float sampleRadius = 1f;
     public LayerMask groundLayer = -1;
+
     public int numberOfPoints = 8;
     [SerializeField]
     private bool circular;
@@ -25,6 +26,9 @@ public class ImprovedWallWalker : MonoBehaviour
     private float m_groundCheckRadius = 0.5f;
     private float m_groundCheckDistance = 0.7f;
     private float m_sampleRadius = 1f;
+
+    [SerializeField]
+    private int m_numberOfPoints = 8;
 
     [Header("Camera Settings")]
     public float mouseSensitivity = 2f;
@@ -93,7 +97,7 @@ public class ImprovedWallWalker : MonoBehaviour
         isGrounded = false;
         if (circular)
         {
-            samplePoints = SamplePattern.Circle(characterHeight, numberOfPoints);
+            samplePoints = SamplePattern.Circle(characterHeight * m_sampleRadius, numberOfPoints);
         }
         else
         {
@@ -193,9 +197,10 @@ public class ImprovedWallWalker : MonoBehaviour
         }
 
         // Update sample radius if changed
-        if (m_sampleRadius != sampleRadius)
+        if (m_sampleRadius != sampleRadius || m_numberOfPoints != numberOfPoints)
         {
             m_sampleRadius = sampleRadius;
+            m_numberOfPoints = numberOfPoints;
             InitializeSamplePoints();
         }
     }
