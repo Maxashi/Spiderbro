@@ -7,7 +7,6 @@ using UnityEngine;
 /// </summary>
 public class ImprovedWallWalker : MonoBehaviour
 {
-
     public float characterHeight = 1f;
     [Header("Movement Settings")]
     public float moveSpeed = 5f;
@@ -52,6 +51,7 @@ public class ImprovedWallWalker : MonoBehaviour
         InitializeSamplePoints();
     }
 
+    #region Initialize
     void InitializeComponents()
     {
         controller = GetComponent<CharacterController>();
@@ -85,7 +85,6 @@ public class ImprovedWallWalker : MonoBehaviour
             Cursor.visible = false;
         }
     }
-    #region InitializePoints
     /// <summary>
     /// Initializes sample points based on the selected sampling method (circular or spherical).
     /// </summary>
@@ -101,6 +100,7 @@ public class ImprovedWallWalker : MonoBehaviour
             samplePoints = SamplePattern.Hemisphere(-transform.up, characterHeight, numberOfPoints);
         }
     }
+    #endregion
 
     void Update()
     {
@@ -294,7 +294,7 @@ public class ImprovedWallWalker : MonoBehaviour
             Gizmos.color = Color.red;
             foreach (Vector3 point in samplePoints)
             {
-                Gizmos.DrawSphere(GetLocaationAtSamplePoint(point), 0.1f);
+                Gizmos.DrawSphere(GetLocationAtSamplePoint(point), 0.1f);
             }
         }
     }
