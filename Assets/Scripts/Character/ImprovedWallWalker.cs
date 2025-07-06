@@ -101,7 +101,7 @@ public class ImprovedWallWalker : MonoBehaviour
         }
         else
         {
-            samplePoints = SamplePattern.Hemisphere(-transform.up, characterHeight, numberOfPoints);
+            samplePoints = SamplePattern.Hemisphere(transform.up, characterHeight, numberOfPoints);
         }
     }
     #endregion
@@ -172,6 +172,8 @@ public class ImprovedWallWalker : MonoBehaviour
         foreach (Vector3 offset in samplePoints)
         {
             Vector3 samplePoint = transform.position + transform.TransformDirection(offset);
+            samplePoint.y = transform.position.y + characterHeight / 2f;
+
             bool isHit = Raycast(samplePoint, -currentNormal, out RaycastHit hit, m_groundCheckDistance);
             if (isHit)
             {
@@ -183,11 +185,17 @@ public class ImprovedWallWalker : MonoBehaviour
 
     private bool Raycast(Vector3 origin, Vector3 direction, out RaycastHit hit, float maxDistance = Mathf.Infinity)
     {
-        if (Physics.Raycast(origin, direction, out hit, maxDistance, groundLayer))
+        Color color = Color.red;
+
+        if (Physics.Raycast(origin, direction, out hit, maxDistance))
         {
-            UnityEngine.Debug.DrawLine(origin, hit.point, Color.cyan, 0.1f, true);
+            color = Color.green;
+            UnityEngine.Debug.DrawLine(hit.point, hit.normal, Color.aliceBlue, 0.1f, true);
             return true;
         }
+
+        UnityEngine.Debug.DrawLine(origin, hit.point, color, 0.1f, true);
+
         hit = default;
         return false;
     }
@@ -281,9 +289,11 @@ public class ImprovedWallWalker : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        // Draw ground check sphere
-        Gizmos.color = Color.yellow;
-        Gizmos.DrawWireSphere(transform.position, m_groundCheckRadius);
+
+        Gizmos.color = Color.green;
+        // Draw the normal of the current surface
+        Gizmos.DrawLine(transform.position, transform.position + currentNormal * characterHeight);
+
 
         // Draw sample points
         if (samplePoints != null)
@@ -291,7 +301,7 @@ public class ImprovedWallWalker : MonoBehaviour
             Gizmos.color = Color.red;
             foreach (Vector3 point in samplePoints)
             {
-                Gizmos.DrawSphere(GetLocationAtSamplePoint(point), 0.1f);
+                Gizmos.DrawWireCube(GetLocationAtSamplePoint(point), Vector3.one * 0.05f);
             }
         }
     }
