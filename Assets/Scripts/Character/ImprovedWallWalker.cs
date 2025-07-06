@@ -22,12 +22,12 @@ public class ImprovedWallWalker : MonoBehaviour
     public int numberOfPoints = 8;
     [SerializeField]
     private bool circular;
+    private bool m_circular;
 
     private float m_groundCheckRadius = 0.5f;
     private float m_groundCheckDistance = 0.7f;
     private float m_sampleRadius = 1f;
 
-    [SerializeField]
     private int m_numberOfPoints = 8;
 
     [Header("Camera Settings")]
@@ -73,7 +73,7 @@ public class ImprovedWallWalker : MonoBehaviour
         }
 
         characterHeight = controller.height;
-        numberOfPoints = 8;
+        m_numberOfPoints = numberOfPoints;
 
         // Create camera holder
         GameObject holder = new("CameraHolder");
@@ -123,7 +123,13 @@ public class ImprovedWallWalker : MonoBehaviour
     #region GroundCheck
     void CheckGrounded()
     {
-        if (circular)
+        if (m_circular != circular)
+        {
+            m_circular = circular;
+            InitializeSamplePoints();
+        }
+
+        if (m_circular)
         {
             CheckGroundCircular();
         }
@@ -189,6 +195,8 @@ public class ImprovedWallWalker : MonoBehaviour
 
     private void CheckUpdatedVariables()
     {
+
+
         // Update ground check radius and distance if changed
         if (m_groundCheckRadius != groundCheckRadius || m_groundCheckDistance != groundCheckDistance)
         {
