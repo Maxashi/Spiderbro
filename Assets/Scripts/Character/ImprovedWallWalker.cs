@@ -226,23 +226,7 @@ public class ImprovedWallWalker : MonoBehaviour
         transform.Rotate(Vector3.up * mouseX);
     }
 
-    bool SamplePoint(Vector3 point, out RaycastHit hit)
-    {
-        Vector3 origin = point + Vector3.up * m_groundCheckRadius;
 
-        bool isHit = Physics.SphereCast(origin, m_groundCheckRadius,
-            -currentNormal,
-            out hit,
-            m_groundCheckDistance
-        );
-
-        UnityEngine.Debug.DrawLine(origin, hit.point, Color.cyan);
-        Color sampleColor = isHit ? Color.green : Color.red;
-        float radius = isHit ? hit.distance : m_groundCheckDistance;
-        DebugGizmos.DrawIcosphere(hit.point, radius, sampleColor);
-
-        return isHit;
-    }
 
     void HandleMovement()
     {
