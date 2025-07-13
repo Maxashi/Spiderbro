@@ -187,10 +187,11 @@ public class ImprovedWallWalker : MonoBehaviour
     {
         Color color = Color.red;
 
-        if (Physics.Raycast(origin, direction, out hit, maxDistance))
+        if (Physics.Raycast(origin, direction, out hit, characterHeight))
         {
             color = Color.green;
-            UnityEngine.Debug.DrawLine(hit.point, hit.normal, Color.aliceBlue, 0.1f, true);
+            Vector3 normalPoint = hit.point + hit.normal * characterHeight;
+            UnityEngine.Debug.DrawLine(hit.point, normalPoint, Color.aliceBlue, 0.1f, true);
             return true;
         }
 
