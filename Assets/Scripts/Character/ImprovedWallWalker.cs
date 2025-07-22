@@ -42,12 +42,16 @@ public class ImprovedWallWalker : MonoBehaviour
     // Private variables
     private Vector3 velocity;
     private Vector3 currentNormal = Vector3.up;
+    [SerializeField]
     private bool isGrounded;
     private float lastSurfaceCheck;
     private CharacterController controller;
     private float cameraPitch = 0f;
     private Vector3[] samplePoints;
     private Transform cameraHolder;
+
+    [SerializeField] private bool debugGroundCheck;
+    [SerializeField] private bool debugMovement;
 
     void Start()
     {
@@ -95,13 +99,40 @@ public class ImprovedWallWalker : MonoBehaviour
     void InitializeSamplePoints()
     {
         isGrounded = false;
+
+        // Create sample points in local space
         if (circular)
         {
-            samplePoints = SamplePattern.Circle(characterHeight * m_sampleRadius, numberOfPoints);
+            // Create points in a circle on the XZ plane
+            samplePoints = new Vector3[numberOfPoints];
+            float angleStep = 360f / numberOfPoints;
+
+            for (int i = 0; i < numberOfPoints; i++)
+            {
+                float angle = i * angleStep * Mathf.Deg2Rad;
+                float x = Mathf.Sin(angle) * sampleRadius;
+                float z = Mathf.Cos(angle) * sampleRadius;
+                samplePoints[i] = new Vector3(x, 0, z);
+            }
         }
         else
         {
-            samplePoints = SamplePattern.Hemisphere(transform.up, characterHeight, numberOfPoints);
+            // Create points distributed on a hemisphere
+            samplePoints = new Vector3[numberOfPoints];
+            float goldenRatio = (1 + Mathf.Sqrt(5)) / 2;
+
+            for (int i = 0; i < numberOfPoints; i++)
+            {
+                float t = (float)i / numberOfPoints;
+                float inclination = Mathf.Acos(1 - 2 * t);
+                float azimuth = 2 * Mathf.PI * goldenRatio * i;
+
+                float x = Mathf.Sin(inclination) * Mathf.Cos(azimuth) * sampleRadius;
+                float y = Mathf.Sin(inclination) * Mathf.Sin(azimuth) * sampleRadius;
+                float z = Mathf.Cos(inclination) * sampleRadius;
+
+                samplePoints[i] = new Vector3(x, y, z);
+            }
         }
     }
     #endregion
@@ -149,19 +180,30 @@ public class ImprovedWallWalker : MonoBehaviour
 
         foreach (Vector3 point in samplePoints)
         {
-            var samplePoint = GetLocationAtSamplePoint(point);
+            // Get the sample point in world space
+            var samplePoint = transform.position + transform.TransformDirection(point);
+            // Direction is from character center toward the sample point
+            var direction = (samplePoint - transform.position).normalized;
 
-            bool isHit = Raycast(transform.position, -currentNormal, out RaycastHit hit, m_groundCheckDistance);
+            bool isHit = Raycast(transform.position, direction, out RaycastHit hit, m_groundCheckDistance);
             if (isHit)
             {
                 averageNormal += hit.normal;
                 hitCount++;
             }
         }
+
+        // Update ground state and normal direction
+        isGrounded = hitCount > 0;
+        if (isGrounded && hitCount > 0)
+        {
+            currentNormal = (averageNormal / hitCount).normalized;
+        }
     }
 
     /// <summary>
     /// This function generates sample points in a circular pattern around the character.
+    /// </summary>
     void CheckGroundCircular()
     {
         isGrounded = false;
@@ -171,9 +213,12 @@ public class ImprovedWallWalker : MonoBehaviour
 
         foreach (Vector3 offset in samplePoints)
         {
-            Vector3 samplePoint = transform.position + transform.TransformDirection(offset);
-            samplePoint.y = transform.position.y + characterHeight / 2f;
+            // Transform the circle points based on character orientation
+            Vector3 localOffset = transform.TransformDirection(offset);
+            // Apply the offset to the character position to get a circle around the character
+            Vector3 samplePoint = transform.position + Vector3.ProjectOnPlane(localOffset, currentNormal) * sampleRadius;
 
+            // Cast from the sample point toward the character's down direction
             bool isHit = Raycast(samplePoint, -currentNormal, out RaycastHit hit, m_groundCheckDistance);
             if (isHit)
             {
@@ -181,21 +226,36 @@ public class ImprovedWallWalker : MonoBehaviour
                 hitCount++;
             }
         }
+
+        // Update ground state and normal direction
+        isGrounded = hitCount > 0;
+        if (isGrounded && hitCount > 0)
+        {
+            currentNormal = (averageNormal / hitCount).normalized;
+        }
     }
 
-    private bool Raycast(Vector3 origin, Vector3 direction, out RaycastHit hit, float maxDistance = Mathf.Infinity)
+    private bool Raycast(Vector3 origin, Vector3 direction, out RaycastHit hit, float maxDistance = 1f)
     {
-        Color color = Color.red;
+        // Normalize direction to ensure consistent behavior
+        direction = direction.normalized;
 
-        if (Physics.Raycast(origin, direction, out hit, characterHeight))
+        if (Physics.Raycast(origin, direction, out hit, maxDistance, groundLayer))
         {
-            color = Color.green;
-            Vector3 normalPoint = hit.point + hit.normal * characterHeight;
-            UnityEngine.Debug.DrawLine(hit.point, normalPoint, Color.aliceBlue, 0.1f, true);
+            if (debugGroundCheck)
+            {
+                // Hit occurred - draw green ray to hit point and show normal
+                UnityEngine.Debug.DrawLine(origin, hit.point, Color.green, 0.1f, true);
+                UnityEngine.Debug.DrawRay(hit.point, hit.normal * 0.5f, Color.cyan, 0.1f, true);
+            }
             return true;
         }
 
-        UnityEngine.Debug.DrawLine(origin, hit.point, color, 0.1f, true);
+        // No hit - draw red ray showing full length
+        if (debugGroundCheck)
+        {
+            UnityEngine.Debug.DrawRay(origin, direction * maxDistance, Color.red, 0.1f, true);
+        }
 
         hit = default;
         return false;
@@ -204,8 +264,6 @@ public class ImprovedWallWalker : MonoBehaviour
 
     private void CheckUpdatedVariables()
     {
-
-
         // Update ground check radius and distance if changed
         if (m_groundCheckRadius != groundCheckRadius || m_groundCheckDistance != groundCheckDistance)
         {
