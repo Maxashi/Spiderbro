@@ -52,6 +52,7 @@ public class ImprovedWallWalker : MonoBehaviour
 
     [SerializeField] private bool debugGroundCheck;
     [SerializeField] private bool debugMovement;
+    private Vector3 moveDirection;
 
     void Start()
     {
@@ -302,10 +303,10 @@ public class ImprovedWallWalker : MonoBehaviour
         float vertical = Input.GetAxis("Vertical");
 
         // Calculate movement direction relative to camera and current surface
-        Vector3 cameraForward = Vector3.ProjectOnPlane(playerCamera.forward, currentNormal).normalized;
-        Vector3 cameraRight = Vector3.Cross(currentNormal, cameraForward).normalized;
+        Vector3 playerForward = transform.forward;
+        Vector3 playerRight = transform.right; // Use character's right direction for lateral movement
 
-        Vector3 moveDirection = (cameraForward * vertical + cameraRight * horizontal).normalized;
+        moveDirection = (playerForward * vertical + playerRight * horizontal).normalized;
 
         if (isGrounded)
         {
@@ -355,7 +356,7 @@ public class ImprovedWallWalker : MonoBehaviour
 
 
         // Draw sample points
-        if (samplePoints != null)
+        if (samplePoints != null && debugGroundCheck)
         {
             Gizmos.color = Color.red;
             foreach (Vector3 point in samplePoints)
@@ -363,6 +364,16 @@ public class ImprovedWallWalker : MonoBehaviour
                 Gizmos.DrawWireCube(GetLocationAtSamplePoint(point), Vector3.one * 0.05f);
             }
         }
+
+        if (debugMovement)
+        {
+            // Draw the character's movement direction
+            Gizmos.color = Color.yellow;
+
+            // Draw the movement direction line
+            Gizmos.DrawLine(transform.position, transform.position + transform.TransformDirection(moveDirection) * 2f);
+        }
+
     }
     void Debug()
     {
