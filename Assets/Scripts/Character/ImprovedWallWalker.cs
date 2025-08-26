@@ -161,14 +161,7 @@ public class ImprovedWallWalker : MonoBehaviour
             InitializeSamplePoints();
         }
 
-        if (m_circular)
-        {
-            CheckGroundCircular();
-        }
-        else
-        {
-            CheckGroundSpherical();
-        }
+        CheckGroundSpherical();
     }
 
     /// <summary>
@@ -202,39 +195,6 @@ public class ImprovedWallWalker : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// This function generates sample points in a circular pattern around the character.
-    /// </summary>
-    void CheckGroundCircular()
-    {
-        isGrounded = false;
-
-        var averageNormal = Vector3.zero;
-        var hitCount = 0;
-
-        foreach (Vector3 offset in samplePoints)
-        {
-            // Transform the circle points based on character orientation
-            Vector3 localOffset = transform.TransformDirection(offset);
-            // Apply the offset to the character position to get a circle around the character
-            Vector3 samplePoint = transform.position + Vector3.ProjectOnPlane(localOffset, currentNormal) * sampleRadius;
-
-            // Cast from the sample point toward the character's down direction
-            bool isHit = Raycast(samplePoint, -currentNormal, out RaycastHit hit, m_groundCheckDistance);
-            if (isHit)
-            {
-                averageNormal += hit.normal;
-                hitCount++;
-            }
-        }
-
-        // Update ground state and normal direction
-        isGrounded = hitCount > 0;
-        if (isGrounded && hitCount > 0)
-        {
-            currentNormal = (averageNormal / hitCount).normalized;
-        }
-    }
 
     private bool Raycast(Vector3 origin, Vector3 direction, out RaycastHit hit, float maxDistance = 1f)
     {
