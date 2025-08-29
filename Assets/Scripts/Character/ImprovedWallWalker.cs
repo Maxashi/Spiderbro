@@ -42,8 +42,11 @@ public class ImprovedWallWalker : MonoBehaviour
     // Private variables
     private Vector3 velocity;
     private Vector3 currentNormal = Vector3.up;
+
+    private bool isOnSurface;
     [SerializeField]
-    private bool isGrounded;
+    private bool isNearSurface;
+
     private float lastSurfaceCheck;
     private CharacterController controller;
     private float cameraPitch = 0f;
@@ -99,7 +102,7 @@ public class ImprovedWallWalker : MonoBehaviour
     /// </summary>
     void InitializeSamplePoints()
     {
-        isGrounded = false;
+        isNearSurface = false;
 
         // Create sample points in local space
         if (circular)
@@ -188,8 +191,8 @@ public class ImprovedWallWalker : MonoBehaviour
         }
 
         // Update ground state and normal direction
-        isGrounded = hitCount > 0;
-        if (isGrounded && hitCount > 0)
+        isNearSurface = hitCount > 0;
+        if (isNearSurface && hitCount > 0)
         {
             currentNormal = (averageNormal / hitCount).normalized;
         }
@@ -268,16 +271,22 @@ public class ImprovedWallWalker : MonoBehaviour
 
         moveDirection = (playerForward * vertical + playerRight * horizontal).normalized;
 
-        if (isGrounded)
+        if (isNearSurface)
         {
             // Apply movement along the surface
             velocity = moveDirection * moveSpeed;
+
+            //when the spider is not tightly adhering to the surface, move them towards the surface
+            if (!isOnSurface)
+            {
+                velocity -= currentNormal * Time.deltaTime;
+            }
 
             // Handle jumping
             if (Input.GetButtonDown("Jump"))
             {
                 velocity += currentNormal * jumpForce;
-                isGrounded = false;
+                isNearSurface = false;
             }
         }
         else
@@ -295,7 +304,7 @@ public class ImprovedWallWalker : MonoBehaviour
         controller.Move(velocity * Time.deltaTime);
 
         // Align character with surface
-        if (moveDirection != Vector3.zero || !isGrounded)
+        if (moveDirection != Vector3.zero || !isNearSurface)
         {
             Quaternion targetRotation = Quaternion.FromToRotation(transform.up, currentNormal) * transform.rotation;
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * rotationSpeed);
