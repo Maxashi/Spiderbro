@@ -47,7 +47,7 @@ public class ImprovedWallWalker : MonoBehaviour
     [SerializeField]
     private bool isNearSurface;
 
-    private float lastSurfaceCheck;
+    private float distanceToSurface;
     private CharacterController controller;
     private float cameraPitch = 0f;
     private Vector3[] samplePoints;
@@ -83,6 +83,8 @@ public class ImprovedWallWalker : MonoBehaviour
         characterHeight = controller.height;
         m_numberOfPoints = numberOfPoints;
 
+
+        //TODO: Create a better Cinemachine camera
         // Create camera holder
         GameObject holder = new("CameraHolder");
         cameraHolder = holder.transform;
@@ -97,6 +99,7 @@ public class ImprovedWallWalker : MonoBehaviour
             Cursor.visible = false;
         }
     }
+
     /// <summary>
     /// Initializes sample points based on the selected sampling method (circular or spherical).
     /// </summary>
@@ -156,21 +159,11 @@ public class ImprovedWallWalker : MonoBehaviour
     }
 
     #region GroundCheck
-    void CheckGrounded()
-    {
-        if (m_circular != circular)
-        {
-            m_circular = circular;
-            InitializeSamplePoints();
-        }
-
-        CheckGroundSpherical();
-    }
 
     /// <summary>
     /// This function generates sample vectors on a sphere around the character, centered at the transform's position.
     /// </summary>
-    void CheckGroundSpherical()
+    void CheckGrounded()
     {
         int hitCount = 0;
         var averageNormal = Vector3.zero;
@@ -198,6 +191,13 @@ public class ImprovedWallWalker : MonoBehaviour
         }
     }
 
+    void CheckClosestDistanceToSurface()
+    {
+        float closestDistance = float.MaxValue;
+        Vector3 closestPoint = Vector3.zero;
+
+        distanceToSurface = closestDistance;
+    }
 
     private bool Raycast(Vector3 origin, Vector3 direction, out RaycastHit hit, float maxDistance = 1f)
     {
