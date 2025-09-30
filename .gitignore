@@ -9,7 +9,8 @@
 /Assets/AssetStoreTools*
 /Logs
 /Library
-
+/Assets/TextMesh Pro*
+UserSettings/Layouts/CurrentMaximizeLayout.dwlt
 # Visual Studio 2015 cache directory
 /.vs/
 
@@ -36,4 +37,9 @@ ExportedObj/
 sysinfo.txt
 
 # Builds
-*.apk
+*.apkAssets/TextMesh Pro/Sprites/EmojiOne.png
+UserSettings/Layouts/CurrentMaximizeLayout.dwlt
+UserSettings/Layouts/*
+/UserSettings/Layouts*
+UserSettings/Layouts/CurrentMaximizeLayout.dwlt
+UserSettings/Layouts/default-6000.dwlt
