@@ -191,10 +191,22 @@ public class ImprovedWallWalker : MonoBehaviour
         }
     }
 
+
     void CheckClosestDistanceToSurface()
     {
         float closestDistance = float.MaxValue;
-        Vector3 closestPoint = Vector3.zero;
+
+        var samplePoint = transform.position;
+        var direction = (samplePoint - transform.position).normalized;
+
+        if (Raycast(transform.position, direction, out RaycastHit hit, m_groundCheckDistance))
+        {
+            float distance = Vector3.Distance(transform.position, hit.point);
+            if (distance < closestDistance)
+            {
+                closestDistance = distance;
+            }
+        }
 
         distanceToSurface = closestDistance;
     }
