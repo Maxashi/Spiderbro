@@ -21,8 +21,6 @@ public class ImprovedWallWalker : MonoBehaviour
 
     public int numberOfPoints = 8;
     [SerializeField]
-    private bool circular;
-    private bool m_circular;
 
     private float m_groundCheckRadius = 0.5f;
     private float m_groundCheckDistance = 0.7f;
@@ -45,15 +43,21 @@ public class ImprovedWallWalker : MonoBehaviour
     [SerializeField]
     private bool isGrounded;
     private float lastSurfaceCheck;
+    private float timeSinceLastCheck = 0f;
     private CharacterController controller;
     private float cameraPitch = 0f;
-    private Vector3[] samplePoints;
+    private SamplePoint[] samplePoints;
     private Transform cameraHolder;
 
     [SerializeField] private bool debugGroundCheck;
     [SerializeField] private bool debugMovement;
     private Vector3 moveDirection;
 
+    public struct SamplePoint
+    {
+        public Vector3 position;
+        public Vector3 direction;
+    }
     void Start()
     {
         InitializeComponents();
@@ -95,45 +99,52 @@ public class ImprovedWallWalker : MonoBehaviour
         }
     }
     /// <summary>
-    /// Initializes sample points based on the selected sampling method (circular or spherical).
+    /// Initializes sample points distributed over a hemisphere with specified radius and orientation.
+    /// Uses the Fibonacci sphere algorithm for even distribution.
     /// </summary>
     void InitializeSamplePoints()
     {
         isGrounded = false;
+        lastSurfaceCheck = 0f;
 
-        // Create sample points in local space
-        if (circular)
-        {
-            // Create points in a circle on the XZ plane
-            samplePoints = new Vector3[numberOfPoints];
-            float angleStep = 360f / numberOfPoints;
+        samplePoints = new SamplePoint[numberOfPoints];
 
-            for (int i = 0; i < numberOfPoints; i++)
-            {
-                float angle = i * angleStep * Mathf.Deg2Rad;
-                float x = Mathf.Sin(angle) * sampleRadius;
-                float z = Mathf.Cos(angle) * sampleRadius;
-                samplePoints[i] = new Vector3(x, 0, z);
-            }
-        }
-        else
-        {
-            // Create points distributed on a hemisphere
-            samplePoints = new Vector3[numberOfPoints];
-            float goldenRatio = (1 + Mathf.Sqrt(5)) / 2;
+        // Normalize the hemisphere direction
+        Vector3 normalizedDirection = Vector3.up;
+
+        // Calculate rotation to align hemisphere with the specified direction
+        // Default hemisphere points down (-Y), rotate to match desired direction
+        Quaternion rotation = Quaternion.FromToRotation(Vector3.up, normalizedDirection);
+
+        // Generate points using Fibonacci sphere algorithm (full sphere first)
+        float offset = 2f / numberOfPoints;
+        float increment = Mathf.PI * (3f - Mathf.Sqrt(5f)); // Golden angle in radians
 
             for (int i = 0; i < numberOfPoints; i++)
             {
-                float t = (float)i / numberOfPoints;
-                float inclination = Mathf.Acos(1 - 2 * t);
-                float azimuth = 2 * Mathf.PI * goldenRatio * i;
+            // Generate point on unit sphere
+            float y = (i * offset) - 1 + (offset / 2);
+            float r = Mathf.Sqrt(1 - y * y);
+            float phi = i * increment;
 
-                float x = Mathf.Sin(inclination) * Mathf.Cos(azimuth) * sampleRadius;
-                float y = Mathf.Sin(inclination) * Mathf.Sin(azimuth) * sampleRadius;
-                float z = Mathf.Cos(inclination) * sampleRadius;
+            float x = Mathf.Cos(phi) * r;
+            float z = Mathf.Sin(phi) * r;
 
-                samplePoints[i] = new Vector3(x, y, z);
-            }
+            // Create point on unit sphere, but only use lower hemisphere (y <= 0)
+            // This creates points in the -Y direction by default
+            Vector3 pointOnUnitSphere = new Vector3(x, -Mathf.Abs(y) * -1f, z);
+
+            // Apply rotation to orient hemisphere in the desired direction
+            Vector3 rotatedPoint = rotation * pointOnUnitSphere;
+
+            // Scale by sample radius
+            Vector3 finalPosition = rotatedPoint * sampleRadius;
+
+            samplePoints[i] = new SamplePoint
+            {
+                position = finalPosition,
+                direction = rotatedPoint.normalized
+            };
         }
     }
     #endregion
@@ -153,40 +164,22 @@ public class ImprovedWallWalker : MonoBehaviour
     }
 
     #region GroundCheck
-    void CheckGrounded()
-    {
-        if (m_circular != circular)
-        {
-            m_circular = circular;
-            InitializeSamplePoints();
-        }
-
-        if (m_circular)
-        {
-            CheckGroundCircular();
-        }
-        else
-        {
-            CheckGroundSpherical();
-        }
-    }
-
     /// <summary>
     /// This function generates sample vectors on a sphere around the character, centered at the transform's position.
     /// </summary>
-    void CheckGroundSpherical()
+    void CheckGrounded()
     {
         int hitCount = 0;
         var averageNormal = Vector3.zero;
 
-        foreach (Vector3 point in samplePoints)
+        foreach (SamplePoint samplePoint in samplePoints)
         {
             // Get the sample point in world space
-            var samplePoint = transform.position + transform.TransformDirection(point);
+            var position = transform.position + transform.TransformDirection(samplePoint.position);
             // Direction is from character center toward the sample point
-            var direction = (samplePoint - transform.position).normalized;
+            var direction = (position - transform.position).normalized;
 
-            bool isHit = Raycast(transform.position, direction, out RaycastHit hit, m_groundCheckDistance);
+            bool isHit = Raycast(transform.position, samplePoint.direction, out RaycastHit hit, m_groundCheckDistance);
             if (isHit)
             {
                 averageNormal += hit.normal;
@@ -202,39 +195,7 @@ public class ImprovedWallWalker : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// This function generates sample points in a circular pattern around the character.
-    /// </summary>
-    void CheckGroundCircular()
-    {
-        isGrounded = false;
 
-        var averageNormal = Vector3.zero;
-        var hitCount = 0;
-
-        foreach (Vector3 offset in samplePoints)
-        {
-            // Transform the circle points based on character orientation
-            Vector3 localOffset = transform.TransformDirection(offset);
-            // Apply the offset to the character position to get a circle around the character
-            Vector3 samplePoint = transform.position + Vector3.ProjectOnPlane(localOffset, currentNormal) * sampleRadius;
-
-            // Cast from the sample point toward the character's down direction
-            bool isHit = Raycast(samplePoint, -currentNormal, out RaycastHit hit, m_groundCheckDistance);
-            if (isHit)
-            {
-                averageNormal += hit.normal;
-                hitCount++;
-            }
-        }
-
-        // Update ground state and normal direction
-        isGrounded = hitCount > 0;
-        if (isGrounded && hitCount > 0)
-        {
-            currentNormal = (averageNormal / hitCount).normalized;
-        }
-    }
 
     private bool Raycast(Vector3 origin, Vector3 direction, out RaycastHit hit, float maxDistance = 1f)
     {
@@ -359,9 +320,10 @@ public class ImprovedWallWalker : MonoBehaviour
         if (samplePoints != null && debugGroundCheck)
         {
             Gizmos.color = Color.red;
-            foreach (Vector3 point in samplePoints)
+            foreach (SamplePoint point in samplePoints)
             {
-                Gizmos.DrawWireCube(GetLocationAtSamplePoint(point), Vector3.one * 0.05f);
+                Gizmos.DrawWireCube(GetLocationAtSamplePoint(point.position), Vector3.one * 0.05f);
+                Gizmos.DrawLine(transform.position + point.position, transform.position + transform.TransformDirection(point.direction) * groundCheckDistance);
             }
         }
 
