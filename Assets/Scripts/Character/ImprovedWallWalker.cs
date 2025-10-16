@@ -10,8 +10,8 @@ public class ImprovedWallWalker : MonoBehaviour
     public float characterHeight = 1f;
     [Header("Movement Settings")]
     public float moveSpeed = 5f;
-    public float jumpForce = 8f;
-    public float gravity = 20f;
+    public float jumpForce = 2f;
+    public float gravity = 10f;
 
     [Header("Surface Detection")]
     public float groundCheckRadius = 0.5f;
