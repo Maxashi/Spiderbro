@@ -1,5 +1,7 @@
 using System;
+using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.PlayerLoop;
 
 /// <summary>
 /// Improved wall-walking mechanics with multiple surface sampling points and mouse look.
@@ -7,22 +9,22 @@ using UnityEngine;
 /// </summary>
 public class ImprovedWallWalker : MonoBehaviour
 {
-    public float characterHeight = 1f;
+    public CharacterController controller;
+    public float sampleDepth;
     [Header("Movement Settings")]
-    public float moveSpeed = 5f;
-    public float jumpForce = 2f;
-    public float gravity = 10f;
+    public float moveSpeed = 3f;
+    public float jumpForce = 4f;
+    public float gravity = 8f;
 
     [Header("Surface Detection")]
-    public float groundCheckRadius = 0.5f;
     public float groundCheckDistance = 0.7f;
     public float sampleRadius = 1f;
     public LayerMask groundLayer = -1;
 
     public int numberOfPoints = 8;
     [SerializeField]
+    public bool grid;
 
-    private float m_groundCheckRadius = 0.5f;
     private float m_groundCheckDistance = 0.7f;
     private float m_sampleRadius = 1f;
 
@@ -44,7 +46,6 @@ public class ImprovedWallWalker : MonoBehaviour
     private bool isGrounded;
     private float lastSurfaceCheck;
     private float timeSinceLastCheck = 0f;
-    private CharacterController controller;
     private float cameraPitch = 0f;
     private SamplePoint[] samplePoints;
     private Transform cameraHolder;
@@ -129,8 +130,8 @@ public class ImprovedWallWalker : MonoBehaviour
         float offset = 2f / numberOfPoints;
         float increment = Mathf.PI * (3f - Mathf.Sqrt(5f)); // Golden angle in radians
 
-            for (int i = 0; i < numberOfPoints; i++)
-            {
+        for (int i = 0; i < numberOfPoints; i++)
+        {
             // Generate point on unit sphere
             float y = (i * offset) - 1 + (offset / 2);
             float r = Mathf.Sqrt(1 - y * y);
