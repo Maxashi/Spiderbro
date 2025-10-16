@@ -81,7 +81,7 @@ public class ImprovedWallWalker : MonoBehaviour
             return;
         }
 
-        characterHeight = controller.height;
+        sampleDepth = controller.height;
         m_numberOfPoints = numberOfPoints;
 
         // Create camera holder
@@ -98,23 +98,32 @@ public class ImprovedWallWalker : MonoBehaviour
             Cursor.visible = false;
         }
     }
+
+    public void InitializeSamplePoints()
+    {
+        if (grid)
+        {
+            InitializeSamplePointsGrid();
+        }
+        else
+        {
+            InitializeSamplePointsSpherical();
+        }
+    }
     /// <summary>
     /// Initializes sample points distributed over a hemisphere with specified radius and orientation.
     /// Uses the Fibonacci sphere algorithm for even distribution.
     /// </summary>
-    void InitializeSamplePoints()
+    void InitializeSamplePointsSpherical()
     {
         isGrounded = false;
         lastSurfaceCheck = 0f;
 
         samplePoints = new SamplePoint[numberOfPoints];
 
-        // Normalize the hemisphere direction
-        Vector3 normalizedDirection = Vector3.up;
-
         // Calculate rotation to align hemisphere with the specified direction
         // Default hemisphere points down (-Y), rotate to match desired direction
-        Quaternion rotation = Quaternion.FromToRotation(Vector3.up, normalizedDirection);
+        Quaternion rotation = Quaternion.Euler(Vector3.up);
 
         // Generate points using Fibonacci sphere algorithm (full sphere first)
         float offset = 2f / numberOfPoints;
@@ -147,6 +156,39 @@ public class ImprovedWallWalker : MonoBehaviour
             };
         }
     }
+
+    private void InitializeSamplePointsGrid()
+    {
+        isGrounded = false;
+        lastSurfaceCheck = 0f;
+        float y = Mathf.Max(controller.height * 1.25f, 0.1f);
+
+        // Set the grid size and spacing
+        // Calculate number of points along one axis based on total number of points
+        float square = Mathf.Sqrt(numberOfPoints);
+        int pointsPerAxis = Mathf.CeilToInt(square);
+        samplePoints = new SamplePoint[pointsPerAxis * pointsPerAxis];
+        float spacing = (pointsPerAxis > 1) ? (sampleRadius * 2) / (pointsPerAxis - 1) : 0;
+
+        for (int x = 0; x < pointsPerAxis; x++)
+        {
+            for (int z = 0; z < pointsPerAxis; z++)
+            {
+                // Calculate position for each point in the grid
+                Vector3 position = new Vector3(
+                    (x * spacing) - (pointsPerAxis - 1) * spacing * 0.5f,
+                    y,
+                    (z * spacing) - (pointsPerAxis - 1) * spacing * 0.5f
+                );
+                samplePoints[x + z * pointsPerAxis] = new SamplePoint
+                {
+                    position = position,
+                    direction = (position - (Vector3.up * sampleDepth)).normalized
+                };
+            }
+        }
+    }
+
     #endregion
 
     void Update()
@@ -227,10 +269,14 @@ public class ImprovedWallWalker : MonoBehaviour
     private void CheckUpdatedVariables()
     {
         // Update ground check radius and distance if changed
-        if (m_groundCheckRadius != groundCheckRadius || m_groundCheckDistance != groundCheckDistance)
+        if (m_groundCheckDistance != groundCheckDistance)
         {
-            m_groundCheckRadius = groundCheckRadius;
             m_groundCheckDistance = groundCheckDistance;
+        }
+
+        if (controller == null)
+        {
+            controller = GetComponentInChildren<CharacterController>();
         }
 
         // Update sample radius if changed
@@ -313,7 +359,7 @@ public class ImprovedWallWalker : MonoBehaviour
 
         Gizmos.color = Color.green;
         // Draw the normal of the current surface
-        Gizmos.DrawLine(transform.position, transform.position + currentNormal * characterHeight);
+        Gizmos.DrawLine(transform.position, transform.position + currentNormal * sampleDepth);
 
 
         // Draw sample points
@@ -345,7 +391,7 @@ public class ImprovedWallWalker : MonoBehaviour
             Camera sceneCam = UnityEditor.SceneView.lastActiveSceneView.camera;
             if (sceneCam != null)
             {
-                UnityEditor.SceneView.lastActiveSceneView.pivot = transform.position + currentNormal * characterHeight;
+                UnityEditor.SceneView.lastActiveSceneView.pivot = transform.position + currentNormal * sampleDepth;
                 UnityEditor.SceneView.lastActiveSceneView.Repaint();
             }
         }
