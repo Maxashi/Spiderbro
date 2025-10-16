@@ -42,12 +42,9 @@ public class ImprovedWallWalker : MonoBehaviour
     // Private variables
     private Vector3 velocity;
     private Vector3 currentNormal = Vector3.up;
-
-    private bool isOnSurface;
     [SerializeField]
-    private bool isNearSurface;
-
-    private float distanceToSurface;
+    private bool isGrounded;
+    private float lastSurfaceCheck;
     private CharacterController controller;
     private float cameraPitch = 0f;
     private Vector3[] samplePoints;
@@ -83,8 +80,6 @@ public class ImprovedWallWalker : MonoBehaviour
         characterHeight = controller.height;
         m_numberOfPoints = numberOfPoints;
 
-
-        //TODO: Create a better Cinemachine camera
         // Create camera holder
         GameObject holder = new("CameraHolder");
         cameraHolder = holder.transform;
@@ -99,13 +94,12 @@ public class ImprovedWallWalker : MonoBehaviour
             Cursor.visible = false;
         }
     }
-
     /// <summary>
     /// Initializes sample points based on the selected sampling method (circular or spherical).
     /// </summary>
     void InitializeSamplePoints()
     {
-        isNearSurface = false;
+        isGrounded = false;
 
         // Create sample points in local space
         if (circular)
@@ -159,11 +153,28 @@ public class ImprovedWallWalker : MonoBehaviour
     }
 
     #region GroundCheck
+    void CheckGrounded()
+    {
+        if (m_circular != circular)
+        {
+            m_circular = circular;
+            InitializeSamplePoints();
+        }
+
+        if (m_circular)
+        {
+            CheckGroundCircular();
+        }
+        else
+        {
+            CheckGroundSpherical();
+        }
+    }
 
     /// <summary>
     /// This function generates sample vectors on a sphere around the character, centered at the transform's position.
     /// </summary>
-    void CheckGrounded()
+    void CheckGroundSpherical()
     {
         int hitCount = 0;
         var averageNormal = Vector3.zero;
@@ -184,31 +195,45 @@ public class ImprovedWallWalker : MonoBehaviour
         }
 
         // Update ground state and normal direction
-        isNearSurface = hitCount > 0;
-        if (isNearSurface && hitCount > 0)
+        isGrounded = hitCount > 0;
+        if (isGrounded && hitCount > 0)
         {
             currentNormal = (averageNormal / hitCount).normalized;
         }
     }
 
-
-    void CheckClosestDistanceToSurface()
+    /// <summary>
+    /// This function generates sample points in a circular pattern around the character.
+    /// </summary>
+    void CheckGroundCircular()
     {
-        float closestDistance = float.MaxValue;
+        isGrounded = false;
 
-        var samplePoint = transform.position;
-        var direction = (samplePoint - transform.position).normalized;
+        var averageNormal = Vector3.zero;
+        var hitCount = 0;
 
-        if (Raycast(transform.position, direction, out RaycastHit hit, m_groundCheckDistance))
+        foreach (Vector3 offset in samplePoints)
         {
-            float distance = Vector3.Distance(transform.position, hit.point);
-            if (distance < closestDistance)
+            // Transform the circle points based on character orientation
+            Vector3 localOffset = transform.TransformDirection(offset);
+            // Apply the offset to the character position to get a circle around the character
+            Vector3 samplePoint = transform.position + Vector3.ProjectOnPlane(localOffset, currentNormal) * sampleRadius;
+
+            // Cast from the sample point toward the character's down direction
+            bool isHit = Raycast(samplePoint, -currentNormal, out RaycastHit hit, m_groundCheckDistance);
+            if (isHit)
             {
-                closestDistance = distance;
+                averageNormal += hit.normal;
+                hitCount++;
             }
         }
 
-        distanceToSurface = closestDistance;
+        // Update ground state and normal direction
+        isGrounded = hitCount > 0;
+        if (isGrounded && hitCount > 0)
+        {
+            currentNormal = (averageNormal / hitCount).normalized;
+        }
     }
 
     private bool Raycast(Vector3 origin, Vector3 direction, out RaycastHit hit, float maxDistance = 1f)
@@ -283,22 +308,16 @@ public class ImprovedWallWalker : MonoBehaviour
 
         moveDirection = (playerForward * vertical + playerRight * horizontal).normalized;
 
-        if (isNearSurface)
+        if (isGrounded)
         {
             // Apply movement along the surface
             velocity = moveDirection * moveSpeed;
-
-            //when the spider is not tightly adhering to the surface, move them towards the surface
-            if (!isOnSurface)
-            {
-                velocity -= currentNormal * Time.deltaTime;
-            }
 
             // Handle jumping
             if (Input.GetButtonDown("Jump"))
             {
                 velocity += currentNormal * jumpForce;
-                isNearSurface = false;
+                isGrounded = false;
             }
         }
         else
@@ -316,7 +335,7 @@ public class ImprovedWallWalker : MonoBehaviour
         controller.Move(velocity * Time.deltaTime);
 
         // Align character with surface
-        if (moveDirection != Vector3.zero || !isNearSurface)
+        if (moveDirection != Vector3.zero || !isGrounded)
         {
             Quaternion targetRotation = Quaternion.FromToRotation(transform.up, currentNormal) * transform.rotation;
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * rotationSpeed);
