@@ -102,64 +102,6 @@ public class ImprovedWallWalker : MonoBehaviour
 
     public void InitializeSamplePoints()
     {
-        if (grid)
-        {
-            InitializeSamplePointsGrid();
-        }
-        else
-        {
-            InitializeSamplePointsSpherical();
-        }
-    }
-    /// <summary>
-    /// Initializes sample points distributed over a hemisphere with specified radius and orientation.
-    /// Uses the Fibonacci sphere algorithm for even distribution.
-    /// </summary>
-    void InitializeSamplePointsSpherical()
-    {
-        isGrounded = false;
-        lastSurfaceCheck = 0f;
-
-        samplePoints = new SamplePoint[numberOfPoints];
-
-        // Calculate rotation to align hemisphere with the specified direction
-        // Default hemisphere points down (-Y), rotate to match desired direction
-        Quaternion rotation = Quaternion.Euler(Vector3.up);
-
-        // Generate points using Fibonacci sphere algorithm (full sphere first)
-        float offset = 2f / numberOfPoints;
-        float increment = Mathf.PI * (3f - Mathf.Sqrt(5f)); // Golden angle in radians
-
-        for (int i = 0; i < numberOfPoints; i++)
-        {
-            // Generate point on unit sphere
-            float y = (i * offset) - 1 + (offset / 2);
-            float r = Mathf.Sqrt(1 - y * y);
-            float phi = i * increment;
-
-            float x = Mathf.Cos(phi) * r;
-            float z = Mathf.Sin(phi) * r;
-
-            // Create point on unit sphere, but only use lower hemisphere (y <= 0)
-            // This creates points in the -Y direction by default
-            Vector3 pointOnUnitSphere = new Vector3(x, -Mathf.Abs(y) * -1f, z);
-
-            // Apply rotation to orient hemisphere in the desired direction
-            Vector3 rotatedPoint = rotation * pointOnUnitSphere;
-
-            // Scale by sample radius
-            Vector3 finalPosition = rotatedPoint * sampleRadius;
-
-            samplePoints[i] = new SamplePoint
-            {
-                position = finalPosition,
-                direction = rotatedPoint.normalized
-            };
-        }
-    }
-
-    private void InitializeSamplePointsGrid()
-    {
         isGrounded = false;
         lastSurfaceCheck = 0f;
         float y = Mathf.Max(controller.height * 1.25f, 0.1f);

@@ -1576,6 +1576,16 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1631691005033273007, guid: 08311fd63941a764d81f2c99152ef025,
+        type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 2.682
+      objectReference: {fileID: 0}
+    - target: {fileID: 1631691005033273007, guid: 08311fd63941a764d81f2c99152ef025,
+        type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 2.146
+      objectReference: {fileID: 0}
     - target: {fileID: 1814532942209197012, guid: 08311fd63941a764d81f2c99152ef025,
         type: 3}
       propertyPath: m_Name
@@ -3739,18 +3749,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f3de5e8507ad5f04ca872073fd7b1dc1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  characterHeight: 0
+  characterHeight: 1.06
   moveSpeed: 2
   jumpForce: 4
   gravity: 8
-  groundCheckRadius: -0.31
-  groundCheckDistance: 0.7
-  sampleRadius: 1
+  groundCheckDistance: 0.49
+  sampleRadius: 0.76
   groundLayer:
     serializedVersion: 2
     m_Bits: 4294967295
-  numberOfPoints: 8
-  m_groundCheckRadius: 0.5
+  numberOfPoints: 40
+  grid: 1
   mouseSensitivity: 2
   maxLookAngle: 80
   playerCamera: {fileID: 0}
