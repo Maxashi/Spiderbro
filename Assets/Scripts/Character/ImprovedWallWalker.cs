@@ -11,6 +11,7 @@ public class ImprovedWallWalker : MonoBehaviour
 {
     public CharacterController controller;
     public float sampleDepth;
+    private float m_sampleDepth;
     [Header("Movement Settings")]
     public float moveSpeed = 3f;
     public float jumpForce = 4f;
@@ -46,6 +47,8 @@ public class ImprovedWallWalker : MonoBehaviour
     private bool isGrounded;
     private float lastSurfaceCheck;
     private float timeSinceLastCheck = 0f;
+    private Vector3 raycastTargetPoint;
+
     private float cameraPitch = 0f;
     private SamplePoint[] samplePoints;
     private Transform cameraHolder;
@@ -53,6 +56,7 @@ public class ImprovedWallWalker : MonoBehaviour
     [SerializeField] private bool debugGroundCheck;
     [SerializeField] private bool debugMovement;
     private Vector3 moveDirection;
+
 
     public struct SamplePoint
     {
@@ -74,6 +78,9 @@ public class ImprovedWallWalker : MonoBehaviour
             UnityEngine.Debug.LogError("ImprovedWallWalker requires a CharacterController component!");
             return;
         }
+
+        //set the target point for the raycasts to be directly below the player at a distance of sampleDepth
+        raycastTargetPoint = Vector3.up * -sampleDepth;
 
         playerCamera = Camera.main != null ? Camera.main.transform : null;
         if (playerCamera == null)
@@ -126,7 +133,8 @@ public class ImprovedWallWalker : MonoBehaviour
                 samplePoints[x + z * pointsPerAxis] = new SamplePoint
                 {
                     position = position,
-                    direction = (position - (Vector3.up * sampleDepth)).normalized
+
+                    direction = (raycastTargetPoint - position).normalized
                 };
             }
         }
@@ -146,6 +154,7 @@ public class ImprovedWallWalker : MonoBehaviour
     void OnValidate()
     {
         InitializeSamplePoints();
+        CheckUpdatedVariables();
     }
 
     #region GroundCheck
@@ -220,6 +229,13 @@ public class ImprovedWallWalker : MonoBehaviour
         if (controller == null)
         {
             controller = GetComponentInChildren<CharacterController>();
+        }
+
+        if (m_sampleDepth != sampleDepth)
+        {
+            m_sampleDepth = sampleDepth;
+            // Update the raycast target point when sampleDepth changes
+            raycastTargetPoint = Vector3.up * -sampleDepth;
         }
 
         // Update sample radius if changed
@@ -312,7 +328,11 @@ public class ImprovedWallWalker : MonoBehaviour
             foreach (SamplePoint point in samplePoints)
             {
                 Gizmos.DrawWireCube(GetLocationAtSamplePoint(point.position), Vector3.one * 0.05f);
-                Gizmos.DrawLine(transform.position + point.position, transform.position + transform.TransformDirection(point.direction) * groundCheckDistance);
+                if (grid)
+                {
+                    Gizmos.DrawLine(transform.position + point.position, raycastTargetPoint);
+                }
+                //Gizmos.DrawLine(transform.position + point.position, transform.position + transform.TransformDirection(point.direction) * groundCheckDistance);
             }
         }
 
