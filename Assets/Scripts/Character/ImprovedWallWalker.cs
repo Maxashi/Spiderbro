@@ -10,7 +10,6 @@ using UnityEngine.PlayerLoop;
 public class ImprovedWallWalker : MonoBehaviour
 {
     public CharacterController controller;
-    public float sampleDepth;
     private float m_sampleDepth;
     [Header("Movement Settings")]
     public float moveSpeed = 3f;
@@ -18,18 +17,7 @@ public class ImprovedWallWalker : MonoBehaviour
     public float gravity = 8f;
 
     [Header("Surface Detection")]
-    public float groundCheckDistance = 0.7f;
-    public float sampleRadius = 1f;
-    public LayerMask groundLayer = -1;
-
-    public int numberOfPoints = 8;
-    [SerializeField]
-    public bool grid;
-
-    private float m_groundCheckDistance = 0.7f;
-    private float m_sampleRadius = 1f;
-
-    private int m_numberOfPoints = 8;
+    public SurfaceDetector surfaceDetector { get; private set; }
 
     [Header("Camera Settings")]
     public float mouseSensitivity = 2f;
@@ -38,35 +26,181 @@ public class ImprovedWallWalker : MonoBehaviour
 
     [Header("Rotation Settings")]
     public float rotationSpeed = 10f;
-    public float surfaceCheckInterval = 0.1f;
 
     // Private variables
     private Vector3 velocity;
-    private Vector3 currentNormal = Vector3.up;
-    [SerializeField]
-    private bool isGrounded;
-    private float lastSurfaceCheck;
-    private float timeSinceLastCheck = 0f;
-    private Vector3 raycastTargetPoint;
 
     private float cameraPitch = 0f;
-    private SamplePoint[] samplePoints;
     private Transform cameraHolder;
-
-    [SerializeField] private bool debugGroundCheck;
-    [SerializeField] private bool debugMovement;
     private Vector3 moveDirection;
 
 
-    public struct SamplePoint
+    public class SurfaceDetector
     {
-        public Vector3 position;
-        public Vector3 direction;
+        UnityEngine.Transform playerTransform;
+        CharacterController controller;
+
+        [SerializeField] private Vector3 currentNormal = Vector3.up;
+        [SerializeField] private bool debugGroundCheck;
+        [SerializeField] private bool debugMovement;
+        public float sampleDepth;
+        public float groundCheckDistance = 0.7f;
+        public float sampleRadius = 1f;
+        public LayerMask groundLayer = -1;
+        public int numberOfPoints = 8;
+        public bool isGrounded;
+        public bool grid;
+        private float m_groundCheckDistance = 0.7f;
+        private float m_sampleRadius = 1f;
+        private int m_numberOfPoints = 8;
+        private float timeSinceLastCheck = 0f;
+        public float surfaceCheckInterval = 0.1f;
+        private Vector3 raycastTargetPoint;
+        private SamplePoint[] samplePoints;
+
+        public struct SamplePoint
+        {
+            public Vector3 position;
+            public Vector3 direction;
+        }
+        public void Initialize(CharacterController controller)
+        {
+            //set the target point for the raycasts to be directly below the player at a distance of sampleDepth
+            raycastTargetPoint = Vector3.up * -sampleDepth;
+            playerTransform = controller.transform;
+            m_sampleRadius = sampleRadius;
+            m_numberOfPoints = numberOfPoints;
+            sampleDepth = controller.height;
+
+            InitializeSamplePoints( controller.height);
+        }
+
+
+        public void InitializeSamplePoints(float characterHeight)
+        {
+            isGrounded = false;
+            timeSinceLastCheck = 0f;
+            float y = Mathf.Max(characterHeight * 1.25f, 0.1f);
+
+            // Set the grid size and spacing
+            // Calculate number of points along one axis based on total number of points
+            float square = Mathf.Sqrt(numberOfPoints);
+            int pointsPerAxis = Mathf.CeilToInt(square);
+            samplePoints = new SamplePoint[pointsPerAxis * pointsPerAxis];
+            float spacing = (pointsPerAxis > 1) ? (sampleRadius * 2) / (pointsPerAxis - 1) : 0;
+
+            for (int x = 0; x < pointsPerAxis; x++)
+            {
+                for (int z = 0; z < pointsPerAxis; z++)
+                {
+                    // Calculate position for each point in the grid
+                    Vector3 position = new Vector3(
+                        (x * spacing) - (pointsPerAxis - 1) * spacing * 0.5f,
+                        y,
+                        (z * spacing) - (pointsPerAxis - 1) * spacing * 0.5f
+                    );
+                    samplePoints[x + z * pointsPerAxis] = new SamplePoint
+                    {
+                        position = position,
+
+                        direction = (raycastTargetPoint - position).normalized
+                    };
+                }
+            }
+        }
+
+        /// <summary>
+        /// This function generates sample vectors on a sphere around the character, centered at the transform's position.
+        /// </summary>
+        public void CheckGrounded()
+        {
+            int hitCount = 0;
+            var averageNormal = Vector3.zero;
+
+            foreach (SamplePoint samplePoint in samplePoints)
+            {
+                // Get the sample point in world space
+                var position = playerTransform.position + playerTransform.TransformDirection(samplePoint.position);
+                // Direction is from character center toward the sample point
+                var direction = (position - playerTransform.position).normalized;
+
+                bool isHit = Raycast(playerTransform.position, samplePoint.direction, out RaycastHit hit, m_groundCheckDistance);
+                if (isHit)
+                {
+                    averageNormal += hit.normal;
+                    hitCount++;
+                }
+            }
+
+            // Update ground state and normal direction
+            isGrounded = hitCount > 0;
+            if (isGrounded && hitCount > 0)
+            {
+                currentNormal = (averageNormal / hitCount).normalized;
+            }
+        }
+
+
+
+        private bool Raycast(Vector3 origin, Vector3 direction, out RaycastHit hit, float maxDistance = 1f)
+        {
+            // Normalize direction to ensure consistent behavior
+            direction = direction.normalized;
+
+            if (Physics.Raycast(origin, direction, out hit, maxDistance, groundLayer))
+            {
+                if (debugGroundCheck)
+                {
+                    // Hit occurred - draw green ray to hit point and show normal
+                    UnityEngine.Debug.DrawLine(origin, hit.point, Color.green, 0.1f, true);
+                    UnityEngine.Debug.DrawRay(hit.point, hit.normal * 0.5f, Color.cyan, 0.1f, true);
+                }
+                return true;
+            }
+
+            // No hit - draw red ray showing full length
+            if (debugGroundCheck)
+            {
+                UnityEngine.Debug.DrawRay(origin, direction * maxDistance, Color.red, 0.1f, true);
+            }
+
+            hit = default;
+            return false;
+        }
+
+
+        private void CheckUpdatedVariables()
+        {
+            // Update ground check radius and distance if changed
+            if (m_groundCheckDistance != groundCheckDistance)
+            {
+                m_groundCheckDistance = groundCheckDistance;
+            }
+
+            if (controller == null)
+            {
+                controller = GetComponentInChildren<CharacterController>();
+            }
+
+            if (m_sampleDepth != sampleDepth)
+            {
+                m_sampleDepth = sampleDepth;
+                // Update the raycast target point when sampleDepth changes
+                raycastTargetPoint = Vector3.up * -sampleDepth;
+            }
+
+            // Update sample radius if changed
+            if (m_sampleRadius != sampleRadius || m_numberOfPoints != numberOfPoints)
+            {
+                m_sampleRadius = sampleRadius;
+                m_numberOfPoints = numberOfPoints;
+                InitializeSamplePoints();
+            }
+        }
     }
     void Start()
     {
         InitializeComponents();
-        InitializeSamplePoints();
     }
 
     #region Initialize
@@ -79,8 +213,7 @@ public class ImprovedWallWalker : MonoBehaviour
             return;
         }
 
-        //set the target point for the raycasts to be directly below the player at a distance of sampleDepth
-        raycastTargetPoint = Vector3.up * -sampleDepth;
+
 
         playerCamera = Camera.main != null ? Camera.main.transform : null;
         if (playerCamera == null)
@@ -89,8 +222,6 @@ public class ImprovedWallWalker : MonoBehaviour
             return;
         }
 
-        sampleDepth = controller.height;
-        m_numberOfPoints = numberOfPoints;
 
         // Create camera holder
         GameObject holder = new("CameraHolder");
@@ -104,41 +235,12 @@ public class ImprovedWallWalker : MonoBehaviour
         {
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
+
         }
+        surfaceDetector.Initialize(this.controller);
     }
 
-    public void InitializeSamplePoints()
-    {
-        isGrounded = false;
-        lastSurfaceCheck = 0f;
-        float y = Mathf.Max(controller.height * 1.25f, 0.1f);
 
-        // Set the grid size and spacing
-        // Calculate number of points along one axis based on total number of points
-        float square = Mathf.Sqrt(numberOfPoints);
-        int pointsPerAxis = Mathf.CeilToInt(square);
-        samplePoints = new SamplePoint[pointsPerAxis * pointsPerAxis];
-        float spacing = (pointsPerAxis > 1) ? (sampleRadius * 2) / (pointsPerAxis - 1) : 0;
-
-        for (int x = 0; x < pointsPerAxis; x++)
-        {
-            for (int z = 0; z < pointsPerAxis; z++)
-            {
-                // Calculate position for each point in the grid
-                Vector3 position = new Vector3(
-                    (x * spacing) - (pointsPerAxis - 1) * spacing * 0.5f,
-                    y,
-                    (z * spacing) - (pointsPerAxis - 1) * spacing * 0.5f
-                );
-                samplePoints[x + z * pointsPerAxis] = new SamplePoint
-                {
-                    position = position,
-
-                    direction = (raycastTargetPoint - position).normalized
-                };
-            }
-        }
-    }
 
     #endregion
 
@@ -146,7 +248,7 @@ public class ImprovedWallWalker : MonoBehaviour
     {
         CheckUpdatedVariables();
         HandleMouseLook();
-        CheckGrounded();
+        surfaceDetector.CheckGrounded();
         HandleMovement();
         Debug();
     }
@@ -158,94 +260,9 @@ public class ImprovedWallWalker : MonoBehaviour
     }
 
     #region GroundCheck
-    /// <summary>
-    /// This function generates sample vectors on a sphere around the character, centered at the transform's position.
-    /// </summary>
-    void CheckGrounded()
-    {
-        int hitCount = 0;
-        var averageNormal = Vector3.zero;
 
-        foreach (SamplePoint samplePoint in samplePoints)
-        {
-            // Get the sample point in world space
-            var position = transform.position + transform.TransformDirection(samplePoint.position);
-            // Direction is from character center toward the sample point
-            var direction = (position - transform.position).normalized;
-
-            bool isHit = Raycast(transform.position, samplePoint.direction, out RaycastHit hit, m_groundCheckDistance);
-            if (isHit)
-            {
-                averageNormal += hit.normal;
-                hitCount++;
-            }
-        }
-
-        // Update ground state and normal direction
-        isGrounded = hitCount > 0;
-        if (isGrounded && hitCount > 0)
-        {
-            currentNormal = (averageNormal / hitCount).normalized;
-        }
-    }
-
-
-
-    private bool Raycast(Vector3 origin, Vector3 direction, out RaycastHit hit, float maxDistance = 1f)
-    {
-        // Normalize direction to ensure consistent behavior
-        direction = direction.normalized;
-
-        if (Physics.Raycast(origin, direction, out hit, maxDistance, groundLayer))
-        {
-            if (debugGroundCheck)
-            {
-                // Hit occurred - draw green ray to hit point and show normal
-                UnityEngine.Debug.DrawLine(origin, hit.point, Color.green, 0.1f, true);
-                UnityEngine.Debug.DrawRay(hit.point, hit.normal * 0.5f, Color.cyan, 0.1f, true);
-            }
-            return true;
-        }
-
-        // No hit - draw red ray showing full length
-        if (debugGroundCheck)
-        {
-            UnityEngine.Debug.DrawRay(origin, direction * maxDistance, Color.red, 0.1f, true);
-        }
-
-        hit = default;
-        return false;
-    }
     #endregion
 
-    private void CheckUpdatedVariables()
-    {
-        // Update ground check radius and distance if changed
-        if (m_groundCheckDistance != groundCheckDistance)
-        {
-            m_groundCheckDistance = groundCheckDistance;
-        }
-
-        if (controller == null)
-        {
-            controller = GetComponentInChildren<CharacterController>();
-        }
-
-        if (m_sampleDepth != sampleDepth)
-        {
-            m_sampleDepth = sampleDepth;
-            // Update the raycast target point when sampleDepth changes
-            raycastTargetPoint = Vector3.up * -sampleDepth;
-        }
-
-        // Update sample radius if changed
-        if (m_sampleRadius != sampleRadius || m_numberOfPoints != numberOfPoints)
-        {
-            m_sampleRadius = sampleRadius;
-            m_numberOfPoints = numberOfPoints;
-            InitializeSamplePoints();
-        }
-    }
 
     void HandleMouseLook()
     {
