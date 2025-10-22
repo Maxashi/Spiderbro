@@ -318,6 +318,12 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 50, y: -30, z: 0}
+--- !u!4 &1078916089 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 1170466190809492342, guid: 08311fd63941a764d81f2c99152ef025,
+    type: 3}
+  m_PrefabInstance: {fileID: 2570948644310381175}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1160234425
 GameObject:
   m_ObjectHideFlags: 0
@@ -453,12 +459,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1947491782}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: -53.2, y: 0, z: -25.2}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 1
   m_Children: []
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 1078916089}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2140491140
 GameObject:
@@ -1623,7 +1629,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
-    m_AddedGameObjects: []
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: 1170466190809492342, guid: 08311fd63941a764d81f2c99152ef025,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1947491785}
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 08311fd63941a764d81f2c99152ef025, type: 3}
 --- !u!23 &2621977661465394066
@@ -2682,6 +2692,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6711341994573083716}
   - component: {fileID: 6711341994573083718}
+  - component: {fileID: 6711341994573083719}
   - component: {fileID: 6711341994573083717}
   m_Layer: 0
   m_Name: 'Player '
@@ -3750,25 +3761,38 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   controller: {fileID: 6711341994573083717}
-  sampleDepth: 3.66
   moveSpeed: 2
   jumpForce: 4
   gravity: 8
-  groundCheckDistance: 1.1
-  sampleRadius: 0.76
-  groundLayer:
-    serializedVersion: 2
-    m_Bits: 4294967295
-  numberOfPoints: 40
-  grid: 1
+  surfaceDetector: {fileID: 6711341994573083719}
   mouseSensitivity: 2
   maxLookAngle: 80
   playerCamera: {fileID: 0}
   rotationSpeed: 3
-  surfaceCheckInterval: 0.1
-  isGrounded: 0
+  debugMovement: 0
+--- !u!114 &6711341994573083719
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4770349133119425257}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 23a8433e8c3ea824aa21cf214769e41b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SurfaceDetector
+  currentNormal: {x: 0, y: 0, z: 0}
   debugGroundCheck: 1
-  debugMovement: 1
+  sampleDepth: 1.17
+  groundCheckDistance: 7.49
+  sampleRadius: 1
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  numberOfPoints: 21
+  isGrounded: 0
+  surfaceCheckInterval: 0.1
 --- !u!1 &6731470615526253054
 GameObject:
   m_ObjectHideFlags: 0
@@ -4940,4 +4964,3 @@ SceneRoots:
   - {fileID: 168786686}
   - {fileID: 6711341994573083716}
   - {fileID: 2570948644310381175}
-  - {fileID: 1947491785}

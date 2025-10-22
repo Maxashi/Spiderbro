@@ -79,7 +79,6 @@ public partial class ImprovedWallWalker : MonoBehaviour
     void Update()
     {
         HandleMouseLook();
-        surfaceDetector.CheckGrounded();
         HandleMovement();
         Debug();
     }
@@ -141,11 +140,6 @@ public partial class ImprovedWallWalker : MonoBehaviour
             Quaternion targetRotation = Quaternion.FromToRotation(transform.up, surfaceDetector.currentNormal) * transform.rotation;
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * rotationSpeed);
         }
-    }
-
-    private Vector3 GetLocationAtSamplePoint(Vector3 point)
-    {
-        return transform.position + transform.TransformDirection(point);
     }
 
     void OnDrawGizmos()

@@ -90,7 +90,7 @@ public class SurfaceDetector : MonoBehaviour
     /// <summary>
     /// This function generates sample vectors on a sphere around the character, centered at the transform's position.
     /// </summary>
-    public void CheckGrounded()
+    private void CheckGrounded()
     {
         int hitCount = 0;
         var averageNormal = Vector3.zero;
@@ -192,7 +192,7 @@ public class SurfaceDetector : MonoBehaviour
 
 
                 Gizmos.DrawWireCube(pos, Vector3.one * 0.05f);
-                Gizmos.DrawLine(transform.position + point.position, raycastTargetPoint);
+                Gizmos.DrawRay(transform.position + point.position, point.direction * groundCheckDistance);
 
                 //Gizmos.DrawLine(transform.position + point.position, transform.position + transform.TransformDirection(point.direction) * groundCheckDistance);
             }
