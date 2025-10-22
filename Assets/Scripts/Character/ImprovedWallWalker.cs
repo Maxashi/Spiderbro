@@ -33,6 +33,7 @@ public partial class ImprovedWallWalker : MonoBehaviour
     private Transform cameraHolder;
     private Vector3 moveDirection;
     public bool debugMovement;
+
     void Start()
     {
         InitializeComponents();
@@ -41,13 +42,6 @@ public partial class ImprovedWallWalker : MonoBehaviour
     #region Initialize
     void InitializeComponents()
     {
-        controller = GetComponent<CharacterController>();
-        if (controller == null)
-        {
-            UnityEngine.Debug.LogError("ImprovedWallWalker requires a CharacterController component!");
-            return;
-        }
-
         playerCamera = Camera.main != null ? Camera.main.transform : null;
         if (playerCamera == null)
         {
@@ -69,11 +63,8 @@ public partial class ImprovedWallWalker : MonoBehaviour
             Cursor.visible = false;
 
         }
-        surfaceDetector.Initialize(this.controller);
     }
-
-
-
+ 
     #endregion
 
     void Update()
@@ -116,7 +107,7 @@ public partial class ImprovedWallWalker : MonoBehaviour
             // Handle jumping
             if (Input.GetButtonDown("Jump"))
             {
-                velocity += surfaceDetector.currentNormal * jumpForce;
+                velocity += surfaceDetector.CurrentNormal * jumpForce;
                 surfaceDetector.isGrounded = false;
             }
         }
@@ -137,7 +128,7 @@ public partial class ImprovedWallWalker : MonoBehaviour
         // Align character with surface
         if (moveDirection != Vector3.zero || !surfaceDetector.isGrounded)
         {
-            Quaternion targetRotation = Quaternion.FromToRotation(transform.up, surfaceDetector.currentNormal) * transform.rotation;
+            Quaternion targetRotation = Quaternion.FromToRotation(transform.up, surfaceDetector.CurrentNormal) * transform.rotation;
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * rotationSpeed);
         }
     }
