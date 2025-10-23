@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 /// <summary>
 /// Surface detection system for characters, using multiple sample points to determine ground contact and surface normals.
@@ -7,26 +8,32 @@ public class SurfaceDetector : MonoBehaviour
     Transform playerTransform;
     CharacterController controller;
     public Vector3 CurrentNormal { get; private set; } = Vector3.up;
+    [Header("Grid Sample Pattern")]
     public int numberOfPoints = 8;
     public float sampleDepth;
     public float groundCheckDistance = 0.7f;
     public bool debugGizmos;
-    [Header("Sample Pattern")]
-    public SamplePattern samplePattern = SamplePattern.Grid;
-    public float sampleRadius = 0.5f;
-    public LayerMask groundLayer = -1;
+    public SamplePattern mainSamplePattern = SamplePattern.Grid;
+    public float gridSampleRadius = 0.5f;
 
+    [Header("Circle pattern")]
+    [Range(0, 32)] public int circleSampleCount = 8;
+    public float circleSampleRadius = 0.5f;
+
+    public LayerMask groundLayer = -1;
     public bool isGrounded;
 
+    // Grid sample pattern variables
     private int m_numberOfPoints = 8;
+    private float m_sampleDepth;
     private float m_sampleRadius = 0.5f;
     private float m_groundCheckDistance = 0.7f;
-    private float m_sampleDepth;
     public float curvature;
     private float timeSinceLastCheck = 0f;
     public float surfaceCheckInterval = 0.1f;
     private Vector3 raycastTargetPoint;
-    private SamplePoint[] samplePoints;
+    private SamplePoint[] gridSamplePoints;
+    private SamplePoint[] circleSamplePoints;
 
     public struct SamplePoint
     {
@@ -44,13 +51,14 @@ public class SurfaceDetector : MonoBehaviour
     {
         Initialize();
     }
+
     void OnValidate()
     {
         Initialize();
         CheckUpdatedVariables();
     }
 
-
+    #region Initialize
     public void Initialize()
     {
         if (!TryGetComponent(out controller))
@@ -62,7 +70,7 @@ public class SurfaceDetector : MonoBehaviour
         //set the target point for the raycasts to be directly below the player at a distance of sampleDepth
         raycastTargetPoint = Vector3.up * -sampleDepth;
         playerTransform = controller.transform;
-        m_sampleRadius = sampleRadius;
+        m_sampleRadius = gridSampleRadius;
         m_numberOfPoints = numberOfPoints;
 
         InitializeSamplepoints();
@@ -70,7 +78,7 @@ public class SurfaceDetector : MonoBehaviour
 
     private void InitializeSamplepoints()
     {
-        switch (samplePattern)
+        switch (mainSamplePattern)
         {
             case SamplePattern.Grid:
                 InitializeGroundSampleGrid();
@@ -81,6 +89,28 @@ public class SurfaceDetector : MonoBehaviour
             default:
                 InitializeGroundSampleGrid();
                 break;
+        }
+
+        InitializeCircleSamplePoints();
+    }
+
+    // Create a circular pattern of sample points around the character
+    private void InitializeCircleSamplePoints()
+    {
+        var radius = circleSampleRadius;
+        circleSamplePoints = new SamplePoint[circleSampleCount];
+        float angleStep = 360f / circleSampleCount;
+
+        for (int i = 0; i < circleSampleCount; i++)
+        {
+            float angle = i * angleStep;
+            Vector3 direction = Quaternion.Euler(0, angle, 0) * Vector3.forward;
+            circleSamplePoints[i] = new SamplePoint
+            {
+                position = direction * radius,
+
+                direction = (raycastTargetPoint - (direction * radius)).normalized
+            };
         }
     }
 
@@ -94,8 +124,8 @@ public class SurfaceDetector : MonoBehaviour
         // Calculate number of points along one axis based on total number of points
         float square = Mathf.Sqrt(numberOfPoints);
         int pointsPerAxis = Mathf.CeilToInt(square);
-        samplePoints = new SamplePoint[pointsPerAxis * pointsPerAxis];
-        float spacing = (pointsPerAxis > 1) ? (sampleRadius * 2) / (pointsPerAxis - 1) : 0;
+        gridSamplePoints = new SamplePoint[pointsPerAxis * pointsPerAxis];
+        float spacing = (pointsPerAxis > 1) ? (gridSampleRadius * 2) / (pointsPerAxis - 1) : 0;
 
         for (int x = 0; x < pointsPerAxis; x++)
         {
@@ -119,7 +149,7 @@ public class SurfaceDetector : MonoBehaviour
                     y,
                     (z * spacing) - (pointsPerAxis - 1) * spacing * 0.5f
                 );
-                samplePoints[x + z * pointsPerAxis] = new SamplePoint
+                gridSamplePoints[x + z * pointsPerAxis] = new SamplePoint
                 {
                     position = position,
 
@@ -133,8 +163,8 @@ public class SurfaceDetector : MonoBehaviour
         isGrounded = false;
         timeSinceLastCheck = 0f;
 
-        var sphereRadius = sampleRadius;
-        samplePoints = new SamplePoint[numberOfPoints];
+        var sphereRadius = gridSampleRadius;
+        gridSamplePoints = new SamplePoint[numberOfPoints];
         float offset = 2f / numberOfPoints;
         float increment = Mathf.PI * (3f - Mathf.Sqrt(5f)); // Golden angle in radians
 
@@ -150,7 +180,7 @@ public class SurfaceDetector : MonoBehaviour
 
             Vector3 pointOnSphere = new Vector3(x, y, z) * sphereRadius;
 
-            samplePoints[i] = new SamplePoint
+            gridSamplePoints[i] = new SamplePoint
             {
                 position = pointOnSphere,
                 direction = (raycastTargetPoint - pointOnSphere).normalized
@@ -159,6 +189,7 @@ public class SurfaceDetector : MonoBehaviour
 
     }
 
+    #endregion
     public void Update()
     {
         CheckUpdatedVariables();
@@ -175,7 +206,7 @@ public class SurfaceDetector : MonoBehaviour
         int hitCount = 0;
         var averageNormal = Vector3.zero;
 
-        foreach (SamplePoint samplePoint in samplePoints)
+        foreach (SamplePoint samplePoint in gridSamplePoints)
         {
             // Get the sample point in world space
             var position = playerTransform.position + playerTransform.TransformDirection(samplePoint.position);
@@ -246,9 +277,9 @@ public class SurfaceDetector : MonoBehaviour
         }
 
         // Update sample radius if changed
-        if (m_sampleRadius != sampleRadius || m_numberOfPoints != numberOfPoints)
+        if (m_sampleRadius != gridSampleRadius || m_numberOfPoints != numberOfPoints)
         {
-            m_sampleRadius = sampleRadius;
+            m_sampleRadius = gridSampleRadius;
             m_numberOfPoints = numberOfPoints;
         }
     }
@@ -261,20 +292,26 @@ public class SurfaceDetector : MonoBehaviour
         Gizmos.DrawLine(transform.position, transform.position + CurrentNormal * sampleDepth);
 
         // Draw sample points
-        if (samplePoints != null && debugGizmos)
+        if (gridSamplePoints != null && debugGizmos)
         {
             Gizmos.color = Color.red;
-            foreach (SamplePoint point in samplePoints)
+            foreach (SamplePoint point in gridSamplePoints)
             {
-
-                var pos = transform.position + transform.TransformDirection(point.position);
-
+                var pos = transform.position + point.position;
 
                 Gizmos.DrawWireCube(pos, Vector3.one * 0.05f);
-                Gizmos.DrawRay(transform.position + point.position, point.direction * groundCheckDistance);
-
-                //Gizmos.DrawLine(transform.position + point.position, transform.position + transform.TransformDirection(point.direction) * groundCheckDistance);
+                Gizmos.DrawRay(pos, point.direction * groundCheckDistance);
             }
+        }
+
+        Gizmos.color = Color.blue;
+
+        foreach (SamplePoint point in circleSamplePoints)
+        {
+            var pos = transform.position + point.position;
+
+            Gizmos.DrawWireCube(pos, Vector3.one * 0.05f);
+            Gizmos.DrawRay(pos, point.direction * groundCheckDistance);
         }
 
 
