@@ -71,7 +71,7 @@ public partial class ImprovedWallWalker : MonoBehaviour
     {
         HandleMouseLook();
         HandleMovement();
-        Debug();
+        DebugMovement();
     }
 
     void HandleMouseLook()
@@ -144,10 +144,8 @@ public partial class ImprovedWallWalker : MonoBehaviour
             Gizmos.DrawLine(transform.position, transform.position + transform.TransformDirection(moveDirection) * 2f);
         }
     }
-    void Debug()
+    void DebugMovement()
     {
-
-
 
         // Visualize movement direction
         UnityEngine.Debug.DrawLine(transform.position, transform.position + velocity.normalized * 2f, Color.yellow);

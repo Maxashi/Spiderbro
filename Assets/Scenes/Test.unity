@@ -184,7 +184,7 @@ Transform:
   m_GameObject: {fileID: 168786684}
   serializedVersion: 2
   m_LocalRotation: {x: 0.21237785, y: 0.000000035593224, z: -0.000000007735681, w: 0.97718763}
-  m_LocalPosition: {x: 2.571, y: 4.527, z: -0.8360001}
+  m_LocalPosition: {x: 2.571, y: 2.175, z: -0.86100006}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 1
   m_Children:
@@ -1066,7 +1066,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0b3908dea2e97934d9ade96e8a037b89, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  PlayerTransform: {fileID: 6711341994573083716}
+  transform: {fileID: 0}
   playerAnimator: {fileID: 4282457175089744357}
   smoothness: 1
   speed: 2000
@@ -1590,7 +1590,12 @@ PrefabInstance:
     - target: {fileID: 1631691005033273007, guid: 08311fd63941a764d81f2c99152ef025,
         type: 3}
       propertyPath: m_LocalPosition.y
-      value: 4.527
+      value: 2.175
+      objectReference: {fileID: 0}
+    - target: {fileID: 1631691005033273007, guid: 08311fd63941a764d81f2c99152ef025,
+        type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -0.86100006
       objectReference: {fileID: 0}
     - target: {fileID: 1814532942209197012, guid: 08311fd63941a764d81f2c99152ef025,
         type: 3}
@@ -3716,7 +3721,7 @@ Transform:
   m_GameObject: {fileID: 4770349133119425257}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 2.571, y: 3.407, z: 1.334}
+  m_LocalPosition: {x: 2.571, y: 1.055, z: 1.309}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 1
   m_Children:
@@ -3782,19 +3787,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 23a8433e8c3ea824aa21cf214769e41b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SurfaceDetector
-  numberOfPoints: 24
-  sampleDepth: 0.36
-  groundCheckDistance: 0.92
   debugGizmos: 1
-  mainSamplePattern: 0
-  gridSampleRadius: 0.5
+  MainSampleCenterOffset: {x: 0, y: 0.29, z: 0}
+  sampleDepth: 0.85
+  groundCheckDistance: 0.34
+  mainSampleRadius: 0.31
+  numberOfPoints: 34
+  mainSamplePattern: 1
   circleSampleCount: 16
-  circleSampleRadius: 0.82
+  circleSampleRadius: 0.99
+  circleSampleCenterOffset: {x: 0, y: 0, z: 0}
+  gridSampleOffset: {x: 0, y: 0, z: 0}
+  curvature: -2.36
   groundLayer:
     serializedVersion: 2
     m_Bits: 4294967295
   isGrounded: 0
-  curvature: -0.16
   surfaceCheckInterval: 0.25
 --- !u!1 &6731470615526253054
 GameObject:

@@ -5,30 +5,37 @@ using UnityEngine;
 /// </summary>
 public class SurfaceDetector : MonoBehaviour
 {
-    Transform playerTransform;
     CharacterController controller;
     public Vector3 CurrentNormal { get; private set; } = Vector3.up;
-    [Header("Grid Sample Pattern")]
-    public int numberOfPoints = 8;
+    public bool debugGizmos;
+
+    [Header("Ground Sampling Settings")]
+    public Vector3 MainSampleCenterOffset;
     public float sampleDepth;
     public float groundCheckDistance = 0.7f;
-    public bool debugGizmos;
+    public float mainSampleRadius = 0.5f;
+    public int numberOfPoints = 8;
+
+    [Header("Main Sample Pattern")]
     public SamplePattern mainSamplePattern = SamplePattern.Grid;
-    public float gridSampleRadius = 0.5f;
 
     [Header("Circle pattern")]
     [Range(0, 32)] public int circleSampleCount = 8;
     public float circleSampleRadius = 0.5f;
+    public float circularDirectionAngle;
+    public Vector3 circleSampleCenterOffset;
+
+    [Header("Grid pattern")]
+    public UnityEngine.Vector3 gridSampleOffset;
+    public float curvature;
 
     public LayerMask groundLayer = -1;
     public bool isGrounded;
-
     // Grid sample pattern variables
     private int m_numberOfPoints = 8;
     private float m_sampleDepth;
     private float m_sampleRadius = 0.5f;
     private float m_groundCheckDistance = 0.7f;
-    public float curvature;
     private float timeSinceLastCheck = 0f;
     public float surfaceCheckInterval = 0.1f;
     private Vector3 raycastTargetPoint;
@@ -54,23 +61,25 @@ public class SurfaceDetector : MonoBehaviour
 
     void OnValidate()
     {
-        Initialize();
         CheckUpdatedVariables();
+        Initialize();
     }
 
     #region Initialize
     public void Initialize()
     {
-        if (!TryGetComponent(out controller))
+        if (controller == null)
         {
-            UnityEngine.Debug.LogError("ImprovedWallWalker requires a CharacterController component!");
-            return;
+            if (!TryGetComponent(out controller))
+            {
+                UnityEngine.Debug.LogError("ImprovedWallWalker requires a CharacterController component!");
+                return;
+            }
         }
 
         //set the target point for the raycasts to be directly below the player at a distance of sampleDepth
         raycastTargetPoint = Vector3.up * -sampleDepth;
-        playerTransform = controller.transform;
-        m_sampleRadius = gridSampleRadius;
+        m_sampleRadius = mainSampleRadius;
         m_numberOfPoints = numberOfPoints;
 
         InitializeSamplepoints();
@@ -87,7 +96,7 @@ public class SurfaceDetector : MonoBehaviour
                 InitializeGroundSampleSphere();
                 break;
             default:
-                InitializeGroundSampleGrid();
+                InitializeGroundSampleSphere();
                 break;
         }
 
@@ -109,7 +118,8 @@ public class SurfaceDetector : MonoBehaviour
             {
                 position = direction * radius,
 
-                direction = (raycastTargetPoint - (direction * radius)).normalized
+                // direction will be x degrees along the circle's tangent
+                direction = Quaternion.Euler(circularDirectionAngle, angle, 0) * Vector3.forward
             };
         }
     }
@@ -125,7 +135,7 @@ public class SurfaceDetector : MonoBehaviour
         float square = Mathf.Sqrt(numberOfPoints);
         int pointsPerAxis = Mathf.CeilToInt(square);
         gridSamplePoints = new SamplePoint[pointsPerAxis * pointsPerAxis];
-        float spacing = (pointsPerAxis > 1) ? (gridSampleRadius * 2) / (pointsPerAxis - 1) : 0;
+        float spacing = (pointsPerAxis > 1) ? (mainSampleRadius * 2) / (pointsPerAxis - 1) : 0;
 
         for (int x = 0; x < pointsPerAxis; x++)
         {
@@ -151,26 +161,27 @@ public class SurfaceDetector : MonoBehaviour
                 );
                 gridSamplePoints[x + z * pointsPerAxis] = new SamplePoint
                 {
-                    position = position,
+                    position = MainSampleCenterOffset - position,
 
-                    direction = (raycastTargetPoint - position).normalized
+                    direction = (MainSampleCenterOffset - position).normalized
                 };
             }
         }
     }
+
     private void InitializeGroundSampleSphere()
     {
         isGrounded = false;
         timeSinceLastCheck = 0f;
 
-        var sphereRadius = gridSampleRadius;
+        var sphereRadius = mainSampleRadius;
         gridSamplePoints = new SamplePoint[numberOfPoints];
         float offset = 2f / numberOfPoints;
         float increment = Mathf.PI * (3f - Mathf.Sqrt(5f)); // Golden angle in radians
 
         for (int i = 0; i < numberOfPoints; i++)
         {
-            float y = ((i * offset) - 1) + (offset / 2);
+            float y = -Mathf.Abs((i * offset) - 1 + (offset / 2));
             float r = Mathf.Sqrt(1 - y * y);
 
             float phi = i * increment;
@@ -178,12 +189,14 @@ public class SurfaceDetector : MonoBehaviour
             float x = Mathf.Cos(phi) * r;
             float z = Mathf.Sin(phi) * r;
 
-            Vector3 pointOnSphere = new Vector3(x, y, z) * sphereRadius;
+            Vector3 pointOnSphere = MainSampleCenterOffset + new Vector3(x, y, z) * sphereRadius;
 
             gridSamplePoints[i] = new SamplePoint
             {
                 position = pointOnSphere,
-                direction = (raycastTargetPoint - pointOnSphere).normalized
+
+                // the direction should point away from the center of the sphere 
+                direction = (pointOnSphere - MainSampleCenterOffset).normalized
             };
         }
 
@@ -209,11 +222,11 @@ public class SurfaceDetector : MonoBehaviour
         foreach (SamplePoint samplePoint in gridSamplePoints)
         {
             // Get the sample point in world space
-            var position = playerTransform.position + playerTransform.TransformDirection(samplePoint.position);
+            var position = transform.position + transform.TransformDirection(samplePoint.position);
             // Direction is from character center toward the sample point
-            var direction = (position - playerTransform.position).normalized;
+            var direction = (position - transform.position).normalized;
 
-            bool isHit = Raycast(playerTransform.position, samplePoint.direction, out RaycastHit hit, m_groundCheckDistance);
+            bool isHit = Raycast(transform.position, samplePoint.direction, out RaycastHit hit, m_groundCheckDistance);
             if (isHit)
             {
                 averageNormal += hit.normal;
@@ -255,7 +268,6 @@ public class SurfaceDetector : MonoBehaviour
         return false;
     }
 
-
     private void CheckUpdatedVariables()
     {
         // Update ground check radius and distance if changed
@@ -277,16 +289,15 @@ public class SurfaceDetector : MonoBehaviour
         }
 
         // Update sample radius if changed
-        if (m_sampleRadius != gridSampleRadius || m_numberOfPoints != numberOfPoints)
+        if (m_sampleRadius != mainSampleRadius || m_numberOfPoints != numberOfPoints)
         {
-            m_sampleRadius = gridSampleRadius;
+            m_sampleRadius = mainSampleRadius;
             m_numberOfPoints = numberOfPoints;
         }
     }
 
     private void OnDrawGizmos()
     {
-
         Gizmos.color = Color.green;
         // Draw the normal of the current surface
         Gizmos.DrawLine(transform.position, transform.position + CurrentNormal * sampleDepth);
@@ -319,7 +330,6 @@ public class SurfaceDetector : MonoBehaviour
 
     void Debug()
     {
-
         // Visualize current up direction
         UnityEngine.Debug.DrawLine(transform.position, transform.position + CurrentNormal * 2f, Color.blue);
 
@@ -335,6 +345,4 @@ public class SurfaceDetector : MonoBehaviour
         }
 #endif
     }
-
-
 }
