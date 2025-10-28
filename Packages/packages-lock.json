@@ -7,6 +7,13 @@
       "dependencies": {},
       "url": "https://packages.unity.com"
     },
+    "com.dcfa_pixels.debugx": {
+      "version": "https://github.com/DCFApixels/Unity-DebugX.git",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "7d4bb3cf229814b4177402edb570b8e1569c30a3"
+    },
     "com.unity.ai.navigation": {
       "version": "2.0.9",
       "depth": 0,
