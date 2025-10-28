@@ -1066,7 +1066,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0b3908dea2e97934d9ade96e8a037b89, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  transform: {fileID: 0}
+  PlayerTransform: {fileID: 0}
   playerAnimator: {fileID: 4282457175089744357}
   smoothness: 1
   speed: 2000
@@ -3787,21 +3787,30 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 23a8433e8c3ea824aa21cf214769e41b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SurfaceDetector
-  debugGizmos: 1
   MainSampleCenterOffset: {x: 0, y: 0.29, z: 0}
   sampleDepth: 0.85
   groundCheckDistance: 0.34
   mainSampleRadius: 0.31
   numberOfPoints: 34
   mainSamplePattern: 1
-  circleSampleCount: 16
-  circleSampleRadius: 0.99
-  circleSampleCenterOffset: {x: 0, y: 0, z: 0}
+  circleSamplingPasses:
+  - circleSampleCount: 7
+    circleSampleRadius: 0.5
+    circularDirectionAngle: 45
+    circleSampleCenterOffset: {x: 0, y: 0.2, z: 0}
+  - circleSampleCount: 7
+    circleSampleRadius: 0.6
+    circularDirectionAngle: 151.17
+    circleSampleCenterOffset: {x: 0, y: 0.1, z: 0}
   gridSampleOffset: {x: 0, y: 0, z: 0}
   curvature: -2.36
   groundLayer:
     serializedVersion: 2
     m_Bits: 4294967295
+  debugGizmos: 1
+  samplePointHeadSize: 0.01
+  debugMeshPlane: {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
+  debugMeshPlaneSize: 0.09
   isGrounded: 0
   surfaceCheckInterval: 0.25
 --- !u!1 &6731470615526253054

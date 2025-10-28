@@ -7,7 +7,6 @@ public class SurfaceDetector : MonoBehaviour
 {
     CharacterController controller;
     public Vector3 CurrentNormal { get; private set; } = Vector3.up;
-    public bool debugGizmos;
 
     [Header("Ground Sampling Settings")]
     public Vector3 MainSampleCenterOffset;
@@ -20,15 +19,24 @@ public class SurfaceDetector : MonoBehaviour
     public SamplePattern mainSamplePattern = SamplePattern.Grid;
 
     [Header("Circle pattern")]
-    public SamplingPass[] circleSamplingPasses;
+    [SerializeField] public SamplingPass[] circleSamplingPasses;
 
     [Header("Grid pattern")]
     public UnityEngine.Vector3 gridSampleOffset;
     public float curvature;
 
     public LayerMask groundLayer = -1;
+
+    [Header("Debug Variables")]
+    public bool debugGizmos;
+    [Range(0.01f, 0.05f)]
+    public float samplePointHeadSize = 0.05f;
+
+
+    public Mesh debugMeshPlane;
+    public float debugMeshPlaneSize = 1f;
+
     public bool isGrounded;
-    // Grid sample pattern variables
     private int m_numberOfPoints = 8;
     private float m_sampleDepth;
     private float m_sampleRadius = 0.5f;
@@ -40,7 +48,7 @@ public class SurfaceDetector : MonoBehaviour
     private SamplePoint[] gridSamplePoints;
     private SamplePoint[] circleSamplePoints;
 
-    [SerializeField]
+    [Serializable]
     public struct SamplingPass
     {
         [Range(0, 32)]
@@ -114,6 +122,11 @@ public class SurfaceDetector : MonoBehaviour
     // Create a circular pattern of sample points around the character
     private void InitializeCircleSamplePoints()
     {
+        if (circleSamplingPasses == null || circleSamplingPasses.Length == 0)
+        {
+            return;
+        }
+
         // first get the total amount of sample points needed
         var totalAmount = 0;
         foreach (var item in circleSamplingPasses)
@@ -121,6 +134,9 @@ public class SurfaceDetector : MonoBehaviour
 
         // then create the array to hold them
         circleSamplePoints = new SamplePoint[totalAmount];
+
+        // Track the current index across all passes
+        int currentIndex = 0;
 
         // each pass defines a different set of circle sample points
         foreach (var pass in circleSamplingPasses)
@@ -131,14 +147,12 @@ public class SurfaceDetector : MonoBehaviour
             {
                 float angle = i * angleStep;
                 Vector3 direction = Quaternion.Euler(0, angle, 0) * Vector3.forward;
-                circleSamplePoints[i] = new SamplePoint
+                circleSamplePoints[currentIndex] = new SamplePoint
                 {
-                    //TODO: offset still neeeds to be applied
-                    position = direction * pass.circleSampleRadius,
-
-                    // direction will be x degrees along the circle's tangent
+                    position = direction * pass.circleSampleRadius + pass.circleSampleCenterOffset,
                     direction = Quaternion.Euler(pass.circularDirectionAngle, angle, 0) * Vector3.forward
                 };
+                currentIndex++; // Increment for each point added
             }
         }
     }
@@ -272,6 +286,8 @@ public class SurfaceDetector : MonoBehaviour
             {
                 // Hit occurred - draw green ray to hit point and show normal
                 UnityEngine.Debug.DrawLine(origin, hit.point, Color.green, 0.1f, true);
+
+                // Draw normal at hitPoint 
                 UnityEngine.Debug.DrawRay(hit.point, hit.normal * 0.5f, Color.cyan, 0.01f, true);
             }
             return true;
@@ -319,34 +335,52 @@ public class SurfaceDetector : MonoBehaviour
     {
         Gizmos.color = Color.green;
         // Draw the normal of the current surface
+
         Gizmos.DrawLine(transform.position, transform.position + CurrentNormal * sampleDepth);
 
-        // Draw sample points
-        if (gridSamplePoints != null && debugGizmos)
-        {
-            Gizmos.color = Color.red;
-            foreach (SamplePoint point in gridSamplePoints)
-            {
-                var pos = transform.position + point.position;
+        DrawPlaneGizmo();
 
-                Gizmos.DrawWireCube(pos, Vector3.one * 0.05f);
-                Gizmos.DrawRay(pos, point.direction * groundCheckDistance);
+        //Draw the samplePoint setup
+        if (!Application.isPlaying && debugGizmos)
+        {
+            if (gridSamplePoints != null)
+            {
+                Gizmos.color = Color.red;
+                foreach (SamplePoint point in gridSamplePoints)
+                    DrawRayGizmos(point, Color.red);
+            }
+
+
+            if (circleSamplePoints != null)
+            {
+                foreach (SamplePoint point in circleSamplePoints)
+                    DrawRayGizmos(point, Color.blue);
+
             }
         }
+    }
 
-        Gizmos.color = Color.blue;
+    private void DrawRayGizmos(SamplePoint point, Color color)
+    {
+        // Draw the ground check sphere
+        Gizmos.color = color;
+        var pos = transform.position + point.position;
 
-        if (circleSamplePoints != null && debugGizmos)
-        {
-            foreach (SamplePoint point in circleSamplePoints)
-            {
-                var pos = transform.position + point.position;
+        Gizmos.DrawSphere(transform.position + point.position, samplePointHeadSize);
+        Gizmos.DrawRay(pos, point.direction * groundCheckDistance);
+    }
 
-                Gizmos.DrawWireCube(pos, Vector3.one * 0.05f);
-                Gizmos.DrawRay(pos, point.direction * groundCheckDistance);
-            }
-        }
 
+    // Draw the ground check plane gizmo
+    private void DrawPlaneGizmo()
+    {
+        // Draw the ground check plane
+        Gizmos.color = Color.yellow;
+        var rot = Quaternion.LookRotation(transform.forward, CurrentNormal);
+        var center = transform.position + MainSampleCenterOffset;
+        center.y -= controller.height;
+
+        Gizmos.DrawMesh(debugMeshPlane, center, rot, Vector3.one * debugMeshPlaneSize);
     }
 
     void Debug()
