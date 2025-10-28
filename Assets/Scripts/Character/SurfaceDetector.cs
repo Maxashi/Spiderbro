@@ -20,10 +20,7 @@ public class SurfaceDetector : MonoBehaviour
     public SamplePattern mainSamplePattern = SamplePattern.Grid;
 
     [Header("Circle pattern")]
-    [Range(0, 32)] public int circleSampleCount = 8;
-    public float circleSampleRadius = 0.5f;
-    public float circularDirectionAngle;
-    public Vector3 circleSampleCenterOffset;
+    public SamplingPass[] circleSamplingPasses;
 
     [Header("Grid pattern")]
     public UnityEngine.Vector3 gridSampleOffset;
@@ -39,8 +36,19 @@ public class SurfaceDetector : MonoBehaviour
     private float timeSinceLastCheck = 0f;
     public float surfaceCheckInterval = 0.1f;
     private Vector3 raycastTargetPoint;
+
     private SamplePoint[] gridSamplePoints;
     private SamplePoint[] circleSamplePoints;
+
+    [SerializeField]
+    public struct SamplingPass
+    {
+        [Range(0, 32)]
+        public int circleSampleCount;
+        public float circleSampleRadius;
+        public float circularDirectionAngle;
+        public Vector3 circleSampleCenterOffset;
+    }
 
     public struct SamplePoint
     {
@@ -106,21 +114,32 @@ public class SurfaceDetector : MonoBehaviour
     // Create a circular pattern of sample points around the character
     private void InitializeCircleSamplePoints()
     {
-        var radius = circleSampleRadius;
-        circleSamplePoints = new SamplePoint[circleSampleCount];
-        float angleStep = 360f / circleSampleCount;
+        // first get the total amount of sample points needed
+        var totalAmount = 0;
+        foreach (var item in circleSamplingPasses)
+            totalAmount += item.circleSampleCount;
 
-        for (int i = 0; i < circleSampleCount; i++)
+        // then create the array to hold them
+        circleSamplePoints = new SamplePoint[totalAmount];
+
+        // each pass defines a different set of circle sample points
+        foreach (var pass in circleSamplingPasses)
         {
-            float angle = i * angleStep;
-            Vector3 direction = Quaternion.Euler(0, angle, 0) * Vector3.forward;
-            circleSamplePoints[i] = new SamplePoint
-            {
-                position = direction * radius,
+            float angleStep = 360f / pass.circleSampleCount;
 
-                // direction will be x degrees along the circle's tangent
-                direction = Quaternion.Euler(circularDirectionAngle, angle, 0) * Vector3.forward
-            };
+            for (int i = 0; i < pass.circleSampleCount; i++)
+            {
+                float angle = i * angleStep;
+                Vector3 direction = Quaternion.Euler(0, angle, 0) * Vector3.forward;
+                circleSamplePoints[i] = new SamplePoint
+                {
+                    //TODO: offset still neeeds to be applied
+                    position = direction * pass.circleSampleRadius,
+
+                    // direction will be x degrees along the circle's tangent
+                    direction = Quaternion.Euler(pass.circularDirectionAngle, angle, 0) * Vector3.forward
+                };
+            }
         }
     }
 
@@ -317,14 +336,16 @@ public class SurfaceDetector : MonoBehaviour
 
         Gizmos.color = Color.blue;
 
-        foreach (SamplePoint point in circleSamplePoints)
+        if (circleSamplePoints != null && debugGizmos)
         {
-            var pos = transform.position + point.position;
+            foreach (SamplePoint point in circleSamplePoints)
+            {
+                var pos = transform.position + point.position;
 
-            Gizmos.DrawWireCube(pos, Vector3.one * 0.05f);
-            Gizmos.DrawRay(pos, point.direction * groundCheckDistance);
+                Gizmos.DrawWireCube(pos, Vector3.one * 0.05f);
+                Gizmos.DrawRay(pos, point.direction * groundCheckDistance);
+            }
         }
-
 
     }
 
