@@ -32,7 +32,6 @@ public class SurfaceDetector : MonoBehaviour
     [Range(0.01f, 0.05f)]
     public float samplePointHeadSize = 0.05f;
 
-
     public Mesh debugMeshPlane;
     public float debugMeshPlaneSize = 1f;
 
@@ -88,7 +87,7 @@ public class SurfaceDetector : MonoBehaviour
         {
             if (!TryGetComponent(out controller))
             {
-                UnityEngine.Debug.LogError("ImprovedWallWalker requires a CharacterController component!");
+                Debug.LogError("ImprovedWallWalker requires a CharacterController component!");
                 return;
             }
         }
@@ -240,7 +239,7 @@ public class SurfaceDetector : MonoBehaviour
     {
         CheckUpdatedVariables();
         CheckGrounded();
-        Debug();
+        DebugMovement();
         timeSinceLastCheck += Time.deltaTime;
     }
 
@@ -277,18 +276,17 @@ public class SurfaceDetector : MonoBehaviour
 
     private bool Raycast(Vector3 origin, Vector3 direction, out RaycastHit hit, float maxDistance = 1f)
     {
-        // Normalize direction to ensure consistent behavior
-        direction = direction.normalized;
+        var duration = Time.deltaTime;
 
-        if (Physics.Raycast(origin, direction, out hit, maxDistance, groundLayer))
+        if (Physics.Raycast(origin, direction.normalized, out hit, maxDistance, groundLayer))
         {
             if (debugGizmos)
             {
                 // Hit occurred - draw green ray to hit point and show normal
-                UnityEngine.Debug.DrawLine(origin, hit.point, Color.green, 0.1f, true);
+                Debug.DrawLine(origin, hit.point, Color.green, duration, true);
 
                 // Draw normal at hitPoint 
-                UnityEngine.Debug.DrawRay(hit.point, hit.normal * 0.5f, Color.cyan, 0.01f, true);
+                Debug.DrawRay(hit.point, hit.normal * 0.5f, Color.cyan, duration, true);
             }
             return true;
         }
@@ -296,7 +294,7 @@ public class SurfaceDetector : MonoBehaviour
         // No hit - draw red ray showing full length
         if (debugGizmos)
         {
-            UnityEngine.Debug.DrawRay(origin, direction * maxDistance, Color.red, 0.1f, true);
+            Debug.DrawRay(origin, direction * maxDistance, Color.red, duration, true);
         }
 
         hit = default;
@@ -345,17 +343,14 @@ public class SurfaceDetector : MonoBehaviour
         {
             if (gridSamplePoints != null)
             {
-                Gizmos.color = Color.red;
                 foreach (SamplePoint point in gridSamplePoints)
                     DrawRayGizmos(point, Color.red);
             }
-
 
             if (circleSamplePoints != null)
             {
                 foreach (SamplePoint point in circleSamplePoints)
                     DrawRayGizmos(point, Color.blue);
-
             }
         }
     }
@@ -375,7 +370,10 @@ public class SurfaceDetector : MonoBehaviour
     private void DrawPlaneGizmo()
     {
         // Draw the ground check plane
-        Gizmos.color = Color.yellow;
+        var col = Color.yellow;
+        col.a = 0.3f;
+        Gizmos.color = col;
+
         var rot = Quaternion.LookRotation(transform.forward, CurrentNormal);
         var center = transform.position + MainSampleCenterOffset;
         center.y -= controller.height;
@@ -383,11 +381,12 @@ public class SurfaceDetector : MonoBehaviour
         Gizmos.DrawMesh(debugMeshPlane, center, rot, Vector3.one * debugMeshPlaneSize);
     }
 
-    void Debug()
+    void DebugMovement()
     {
         // Visualize current up direction
-        UnityEngine.Debug.DrawLine(transform.position, transform.position + CurrentNormal * 2f, Color.blue);
+        Debug.DrawLine(transform.position, transform.position + CurrentNormal * 2f, Color.blue);
 
+        // Focus Scene view camera on the character's position
 #if UNITY_EDITOR
         if (UnityEditor.SceneView.lastActiveSceneView != null)
         {
