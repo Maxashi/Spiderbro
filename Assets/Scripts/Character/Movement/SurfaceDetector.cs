@@ -266,6 +266,19 @@ public class SurfaceDetector : MonoBehaviour
             }
         }
 
+        foreach (var samplePoint in circleSamplePoints)
+        {
+            // Get the sample point in world space
+            var position = transform.position + transform.TransformDirection(samplePoint.position);
+            bool isHit = Raycast(transform.position, samplePoint.direction, out RaycastHit hit, m_groundCheckDistance);
+
+            if (isHit)
+            {
+                averageNormal += hit.normal;
+                hitCount++;
+            }
+        }
+
         // Update ground state and normal direction
         isGrounded = hitCount > 0;
         if (isGrounded && hitCount > 0)
