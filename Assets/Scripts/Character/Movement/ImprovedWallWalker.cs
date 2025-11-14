@@ -123,7 +123,9 @@ public partial class ImprovedWallWalker : MonoBehaviour
         }
 
         // Move the character
-        controller.Move(velocity * Time.deltaTime);
+        // controller.Move(velocity * Time.deltaTime);
+
+        transform.position += velocity * Time.deltaTime;
 
         // Align character with surface
         if (moveDirection != Vector3.zero || !surfaceDetector.isGrounded)
