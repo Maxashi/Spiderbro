@@ -27,7 +27,7 @@ public partial class ImprovedWallWalker : MonoBehaviour
     public float rotationSpeed = 10f;
 
     // Private variables
-    private Vector3 velocity;
+    public Vector3 velocity; // Made public for SurfaceDetector access
 
     private float cameraPitch = 0f;
     private Transform cameraHolder;
@@ -101,14 +101,21 @@ public partial class ImprovedWallWalker : MonoBehaviour
 
         if (surfaceDetector.isGrounded)
         {
-            // Apply movement along the surface
-            velocity = moveDirection * moveSpeed;
+            // Project movement onto surface to follow contours
+            Vector3 surfaceMovement = Vector3.ProjectOnPlane(moveDirection, surfaceDetector.CurrentNormal).normalized;
+            
+            // Calculate movement relative to surface
+            velocity = surfaceMovement * moveSpeed;
+
+            // Add stronger surface adherence for wall walking
+            float surfaceAngle = Vector3.Angle(Vector3.up, surfaceDetector.CurrentNormal);
+            float adherenceForce = Mathf.Clamp01(surfaceAngle / 90f) * gravity * 0.3f; // Stronger on steeper surfaces
+            velocity += -surfaceDetector.CurrentNormal * adherenceForce;
 
             // Handle jumping
             if (Input.GetButtonDown("Jump"))
             {
-                velocity += surfaceDetector.CurrentNormal * jumpForce;
-                surfaceDetector.isGrounded = false;
+                velocity = surfaceDetector.CurrentNormal * jumpForce;
             }
         }
         else
@@ -122,16 +129,34 @@ public partial class ImprovedWallWalker : MonoBehaviour
             velocity = Vector3.Lerp(horizontalVelocity, airMove, Time.deltaTime * 2f) + Vector3.Project(velocity, Vector3.up);
         }
 
-        // Move the character
-        // controller.Move(velocity * Time.deltaTime);
+        // Move the character using CharacterController to prevent clipping
+        Vector3 movement = velocity * Time.deltaTime;
 
-        transform.position += velocity * Time.deltaTime;
+        // For grounded movement, use less restrictive collision checking
+        if (movement.magnitude > 0.001f && !surfaceDetector.isGrounded)
+        {
+            float safeDistance = surfaceDetector.GetSafeMovementDistance(movement.normalized, movement.magnitude);
+            movement = movement.normalized * safeDistance;
+        }
+        else if (movement.magnitude > 0.001f && surfaceDetector.isGrounded)
+        {
+            // For surface movement, allow more freedom and let CharacterController handle collisions
+            float safeDistance = surfaceDetector.GetSafeMovementDistance(movement.normalized, movement.magnitude);
+            if (safeDistance < movement.magnitude * 0.5f) // Only restrict if collision is very close
+            {
+                movement = movement.normalized * safeDistance;
+            }
+        }
 
-        // Align character with surface
-        if (moveDirection != Vector3.zero || !surfaceDetector.isGrounded)
+        // Use CharacterController.Move for proper collision handling
+        controller.Move(movement);
+
+        // Align character with surface - faster rotation for better wall walking
+        if (surfaceDetector.isGrounded)
         {
             Quaternion targetRotation = Quaternion.FromToRotation(transform.up, surfaceDetector.CurrentNormal) * transform.rotation;
-            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * rotationSpeed);
+            float rotSpeed = moveDirection != Vector3.zero ? rotationSpeed * 2f : rotationSpeed; // Faster rotation when moving
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * rotSpeed);
         }
     }
 

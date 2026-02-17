@@ -81,9 +81,9 @@ public class SurfaceDetector : MonoBehaviour
     {
         int hitCount = 0;
         var averageNormal = Vector3.zero;
-        Vector3 surfaceNormal = transform.up; // fallback
+        isGrounded = false; // Reset grounded state
 
-        // downward spherecast to check for ground directly 
+        // Primary downward check for ground
         if (Physics.SphereCast(transform.position, downwardSampleRadius, -transform.up, out RaycastHit downHit, downwardCheckDistance, groundLayer))
         {
             hitCount++;
@@ -92,33 +92,58 @@ public class SurfaceDetector : MonoBehaviour
 
             if (debugGizmos)
             {
-                // Draw hit point
                 Debug.DrawLine(transform.position, downHit.point, Color.yellow, 0.125f, false);
             }
-
-            // Optionally snap position slightly to surface:
-            Vector3 desiredPos = downHit.point + surfaceNormal * (controller.height * 0.5f - controller.radius);
-            transform.position = Vector3.Lerp(transform.position, desiredPos, 0.2f);
         }
 
+        // Multi-directional checks for wall detection
+        Vector3[] directions = { transform.forward, transform.right, -transform.right, -transform.forward };
 
-        //we also need a forward spherecast to allow for walking up slopes
-        if (Physics.SphereCast(transform.position, forwardSampleRadius, transform.forward, out RaycastHit forwardHit, forwardCheckDistance, groundLayer))
+        foreach (Vector3 direction in directions)
         {
-            isGrounded = true;
-            hitCount++;
-            averageNormal += forwardHit.normal * 2f;
-            
-            if (debugGizmos)
+            if (Physics.SphereCast(transform.position, forwardSampleRadius, direction, out RaycastHit hit, forwardCheckDistance, groundLayer))
             {
-                // Draw hit point
-                Debug.DrawLine(transform.position, forwardHit.point, Color.softGreen, 0.125f, false);
+                // Accept any surface for spider-like movement
+                isGrounded = true;
+                hitCount++;
+
+                // Weight hits based on how aligned they are with current movement
+                float directionWeight = Vector3.Dot(direction, transform.forward) + 1f; // 0-2 range
+                averageNormal += hit.normal * directionWeight;
+
+                if (debugGizmos)
+                {
+                    Color debugColor = direction == transform.forward ? Color.green : Color.cyan;
+                    Debug.DrawLine(transform.position, hit.point, debugColor, 0.125f, false);
+                }
+            }
+        }
+
+        // Additional check along current velocity for better surface following
+        Vector3 velocityDir = GetComponent<ImprovedWallWalker>()?.velocity.normalized ?? Vector3.zero;
+        if (velocityDir != Vector3.zero && velocityDir.magnitude > 0.1f)
+        {
+            if (Physics.SphereCast(transform.position, forwardSampleRadius * 0.7f, velocityDir, out RaycastHit velHit, forwardCheckDistance * 1.5f, groundLayer))
+            {
+                isGrounded = true;
+                hitCount++;
+                averageNormal += velHit.normal * 1.5f; // Higher weight for velocity direction
+
+                if (debugGizmos)
+                {
+                    Debug.DrawLine(transform.position, velHit.point, Color.magenta, 0.125f, false);
+                }
             }
         }
 
         if (isGrounded && hitCount > 0)
         {
-            CurrentNormal = (averageNormal).normalized;
+            CurrentNormal = averageNormal.normalized;
+        }
+        else
+        {
+            // When not grounded, gradually return to world up
+            CurrentNormal = Vector3.Slerp(CurrentNormal, Vector3.up, Time.deltaTime * 2f);
         }
     }
 
@@ -172,22 +197,71 @@ public class SurfaceDetector : MonoBehaviour
         Gizmos.DrawMesh(debugMeshPlane, center, rot, Vector3.one * debugMeshPlaneSize);
     }
 
+    /// <summary>
+    /// Check if movement in a direction would cause collision
+    /// </summary>
+    public bool CheckMovementCollision(Vector3 direction, float distance)
+    {
+        Vector3 castOrigin = transform.position + Vector3.up * (controller.radius + 0.1f);
+        return Physics.CapsuleCast(
+            castOrigin,
+            castOrigin + Vector3.up * (controller.height - controller.radius * 2f),
+            controller.radius * 0.9f, // Slightly smaller to avoid edge cases
+            direction,
+            distance,
+            groundLayer
+        );
+    }
+
+    /// <summary>
+    /// Get the safe movement distance in a direction before hitting an obstacle
+    /// </summary>
+    public float GetSafeMovementDistance(Vector3 direction, float maxDistance)
+    {
+        if (!isGrounded)
+        {
+            // In air, use normal collision detection
+            Vector3 castOrigin = transform.position + Vector3.up * (controller.radius + 0.1f);
+            if (Physics.CapsuleCast(
+                castOrigin,
+                castOrigin + Vector3.up * (controller.height - controller.radius * 2f),
+                controller.radius * 0.9f,
+                direction,
+                out RaycastHit hit,
+                maxDistance,
+                groundLayer))
+            {
+                return Mathf.Max(0f, hit.distance - controller.radius * 0.1f);
+            }
+            return maxDistance;
+        }
+
+        // When grounded, allow movement along surfaces with more lenient collision
+        // Use smaller capsule cast to avoid getting stuck on small terrain variations
+        Vector3 smallCastOrigin = transform.position + CurrentNormal * (controller.radius * 0.5f);
+        if (Physics.CapsuleCast(
+            smallCastOrigin,
+            smallCastOrigin + CurrentNormal * (controller.height * 0.5f),
+            controller.radius * 0.7f, // Smaller radius for surface following
+            direction,
+            out RaycastHit surfaceHit,
+            maxDistance * 1.2f, // Allow slightly more distance for surface movement
+            groundLayer))
+        {
+            // If we hit something, check if it's a surface we can walk on
+            float surfaceAngle = Vector3.Angle(CurrentNormal, surfaceHit.normal);
+            if (surfaceAngle < 45f) // Similar surface orientation, allow closer approach
+            {
+                return Mathf.Max(maxDistance * 0.8f, surfaceHit.distance - controller.radius * 0.05f);
+            }
+            return Mathf.Max(0f, surfaceHit.distance - controller.radius * 0.2f);
+        }
+        return maxDistance;
+    }
+
     void DebugMovement()
     {
         // Visualize current up direction
         Debug.DrawLine(transform.position, transform.position + CurrentNormal * 2f, Color.blue);
-
-        // Focus Scene view camera on the character's position
-#if UNITY_EDITOR
-        if (UnityEditor.SceneView.lastActiveSceneView != null)
-        {
-            Camera sceneCam = UnityEditor.SceneView.lastActiveSceneView.camera;
-            if (sceneCam != null)
-            {
-                UnityEditor.SceneView.lastActiveSceneView.pivot = transform.position + CurrentNormal * sampleDepth;
-                UnityEditor.SceneView.lastActiveSceneView.Repaint();
-            }
-        }
-#endif
     }
 }
