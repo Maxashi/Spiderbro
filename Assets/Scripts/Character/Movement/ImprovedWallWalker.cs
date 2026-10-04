@@ -28,7 +28,8 @@ public class ImprovedWallWalker : MonoBehaviour
     public Transform playerCamera;
 
     [Header("Debug")]
-    public bool debugMovement;
+    public bool debugMovement = true;
+    public bool debugOverlay = true;
 
     // Read by SurfaceDetector.
     [HideInInspector] public Vector3 velocity;
@@ -36,6 +37,17 @@ public class ImprovedWallWalker : MonoBehaviour
     public bool IsStuck { get; private set; }
 
     const float Skin = 0.02f;
+
+    struct DebugCast
+    {
+        public bool valid, hit;
+        public Vector3 origin, dir, point, normal;
+        public float dist, radius;
+        public Color color;
+    }
+
+    // 0 wall ahead, 1 stick, 2 edge wrap, 3 air
+    readonly DebugCast[] casts = new DebugCast[4];
 
     Transform cameraHolder;
     float cameraPitch;
@@ -78,11 +90,55 @@ public class ImprovedWallWalker : MonoBehaviour
 
         Align();
 
-        if (debugMovement)
+    }
+
+    void Record(int i, Vector3 origin, Vector3 dir, float dist, float r, bool hit, RaycastHit h, Color c)
+    {
+        casts[i] = new DebugCast
         {
-            Debug.DrawRay(transform.position, normal, Color.green);
-            Debug.DrawRay(transform.position, velocity, Color.yellow);
+            valid = true, hit = hit, origin = origin, dir = dir, dist = hit ? h.distance : dist,
+            radius = r, point = h.point, normal = h.normal, color = c
+        };
+    }
+
+    void OnDrawGizmos()
+    {
+        if (!debugMovement) return;
+        Vector3 p = transform.position;
+
+        Gizmos.color = Color.cyan;
+        Gizmos.DrawRay(p, transform.up * 1.5f);          // body up
+        Gizmos.color = Color.green;
+        Gizmos.DrawRay(p, normal * 1.5f);                // target surface normal
+        Gizmos.color = Color.blue;
+        Gizmos.DrawRay(p, transform.forward * 1f);
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawRay(p, velocity);
+        Gizmos.color = new Color(1f, 1f, 1f, 0.4f);
+        Gizmos.DrawWireSphere(p, radius);
+        Gizmos.DrawWireSphere(p - normal * (hoverDistance - radius), 0.03f);
+
+        if (!Application.isPlaying) return;
+        foreach (var c in casts)
+        {
+            if (!c.valid) continue;
+            Vector3 end = c.origin + c.dir * c.dist;
+            Gizmos.color = c.color;
+            Gizmos.DrawLine(c.origin, end);
+            Gizmos.DrawWireSphere(c.origin, c.radius);
+            Gizmos.DrawWireSphere(end, c.radius);
+            if (!c.hit) continue;
+            Gizmos.color = Color.red;
+            Gizmos.DrawSphere(c.point, 0.05f);
+            Gizmos.DrawRay(c.point, c.normal * 0.5f);
         }
+    }
+
+    void OnGUI()
+    {
+        if (!debugOverlay) return;
+        GUI.Label(new Rect(10, 10, 420, 100),
+            $"State: {(IsStuck ? "STUCK" : "AIR")}\nNormal: {normal:F2}\nBody up: {transform.up:F2}\nSpeed: {velocity.magnitude:F2}");
     }
 
     void Look()
@@ -120,8 +176,9 @@ public class ImprovedWallWalker : MonoBehaviour
         {
             Vector3 d = step / dist;
             // A blocking surface ahead (wall or ceiling) becomes the new floor.
-            if (Physics.SphereCast(pos, radius, d, out RaycastHit wall, dist + Skin, surfaceMask, QueryTriggerInteraction.Ignore)
-                && wall.distance > 0f)
+            bool wallHit = Physics.SphereCast(pos, radius, d, out RaycastHit wall, dist + Skin, surfaceMask, QueryTriggerInteraction.Ignore);
+            Record(0, pos, d, dist + Skin, radius, wallHit, wall, Color.magenta);
+            if (wallHit && wall.distance > 0f)
             {
                 pos += d * Mathf.Max(0f, wall.distance - Skin);
                 normal = wall.normal;
@@ -141,8 +198,10 @@ public class ImprovedWallWalker : MonoBehaviour
     bool Stick(ref Vector3 pos)
     {
         float reach = hoverDistance + stickRange;
-        if (!Physics.SphereCast(pos + normal * radius, radius, -normal, out RaycastHit hit, reach, surfaceMask, QueryTriggerInteraction.Ignore))
-            return false;
+        Vector3 origin = pos + normal * radius;
+        bool found = Physics.SphereCast(origin, radius, -normal, out RaycastHit hit, reach, surfaceMask, QueryTriggerInteraction.Ignore);
+        Record(1, origin, -normal, reach, radius, found, hit, Color.green);
+        if (!found) return false;
 
         // Spherecast normals can be edge-smoothed; blend to avoid jitter.
         normal = Vector3.Slerp(normal, hit.normal, 0.5f).normalized;
@@ -158,8 +217,9 @@ public class ImprovedWallWalker : MonoBehaviour
 
         Vector3 origin = pos - normal * (hoverDistance + radius);
         float reach = stepDist + radius * 2f + hoverDistance;
-        if (Physics.SphereCast(origin, radius * 0.5f, back, out RaycastHit hit, reach, surfaceMask, QueryTriggerInteraction.Ignore)
-            && hit.distance > 0f)
+        bool found = Physics.SphereCast(origin, radius * 0.5f, back, out RaycastHit hit, reach, surfaceMask, QueryTriggerInteraction.Ignore);
+        Record(2, origin, back, reach, radius * 0.5f, found, hit, Color.cyan);
+        if (found && hit.distance > 0f)
         {
             normal = hit.normal;
             pos = hit.point + hit.normal * hoverDistance;
@@ -187,8 +247,9 @@ public class ImprovedWallWalker : MonoBehaviour
         if (dist > 0.0001f)
         {
             Vector3 d = step / dist;
-            if (Physics.SphereCast(pos, radius, d, out RaycastHit hit, dist + Skin, surfaceMask, QueryTriggerInteraction.Ignore)
-                && hit.distance > 0f && Time.time >= airUntil)
+            bool found = Physics.SphereCast(pos, radius, d, out RaycastHit hit, dist + Skin, surfaceMask, QueryTriggerInteraction.Ignore);
+            Record(3, pos, d, dist + Skin, radius, found, hit, Color.white);
+            if (found && hit.distance > 0f && Time.time >= airUntil)
             {
                 // Land on whatever we hit, walls included.
                 normal = hit.normal;
