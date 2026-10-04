@@ -2,7 +2,7 @@ using UnityEngine;
 
 /// <summary>
 /// Simple spider controller: walks on any surface and treats walls as more floor.
-/// Kinematic, sphere-cast based. Does not use CharacterController or SurfaceDetector.
+/// Kinematic, sphere-cast based. Does not use CharacterController.
 /// </summary>
 public class ImprovedWallWalker : MonoBehaviour
 {
@@ -25,13 +25,16 @@ public class ImprovedWallWalker : MonoBehaviour
     [Header("Camera")]
     public float mouseSensitivity = 2f;
     public float maxLookAngle = 80f;
-    public Transform playerCamera;
+    [Tooltip("Set as Follow target of the Cinemachine camera. Created automatically if empty.")]
+    public Transform cameraTarget;
+    public float cameraTargetHeight = 0.5f;
+    [Tooltip("How fast the camera up vector follows the surface (lower = lazier).")]
+    public float cameraUpSpeed = 4f;
 
     [Header("Debug")]
     public bool debugMovement = true;
     public bool debugOverlay = true;
 
-    // Read by SurfaceDetector.
     [HideInInspector] public Vector3 velocity;
 
     public bool IsStuck { get; private set; }
@@ -49,8 +52,8 @@ public class ImprovedWallWalker : MonoBehaviour
     // 0 wall ahead, 1 stick, 2 edge wrap, 3 air
     readonly DebugCast[] casts = new DebugCast[4];
 
-    Transform cameraHolder;
     float cameraPitch;
+    Vector3 cameraUp = Vector3.up;
     Vector3 normal = Vector3.up;
     float airUntil;
 
@@ -58,21 +61,14 @@ public class ImprovedWallWalker : MonoBehaviour
     {
         // Our own casts would otherwise fight the CharacterController's collider.
         if (TryGetComponent(out CharacterController cc)) cc.enabled = false;
-        if (TryGetComponent(out SurfaceDetector sd)) sd.enabled = false;
 
         normal = transform.up;
         IsStuck = true;
 
-        if (playerCamera == null && Camera.main != null) playerCamera = Camera.main.transform;
-        if (playerCamera == null)
-        {
-            Debug.LogError("Player camera not assigned!");
-            return;
-        }
-
-        cameraHolder = new GameObject("CameraHolder").transform;
-        cameraHolder.SetParent(transform, false);
-        playerCamera.SetParent(cameraHolder, true);
+        if (cameraTarget == null) cameraTarget = new GameObject("CameraTarget").transform;
+        cameraTarget.SetParent(null);
+        cameraUp = transform.up;
+        UpdateCameraTarget(1f);
 
         if (!Application.isEditor)
         {
@@ -147,10 +143,23 @@ public class ImprovedWallWalker : MonoBehaviour
         float my = Input.GetAxis("Mouse Y") * mouseSensitivity;
 
         transform.Rotate(transform.up, mx, Space.World);
-
-        if (cameraHolder == null) return;
         cameraPitch = Mathf.Clamp(cameraPitch - my, -maxLookAngle, maxLookAngle);
-        cameraHolder.localRotation = Quaternion.Euler(cameraPitch, 0f, 0f);
+    }
+
+    void LateUpdate() => UpdateCameraTarget(1f - Mathf.Exp(-cameraUpSpeed * Time.deltaTime));
+
+    // Target keeps a lagged up vector so the camera swings over the shoulder on walls and ceilings.
+    void UpdateCameraTarget(float upBlend)
+    {
+        Vector3 goalUp = IsStuck ? normal : transform.up;
+        cameraUp = Vector3.Slerp(cameraUp, goalUp, upBlend).normalized;
+
+        Vector3 fwd = Vector3.ProjectOnPlane(transform.forward, cameraUp);
+        if (fwd.sqrMagnitude < 1e-4f) fwd = Vector3.ProjectOnPlane(transform.up, cameraUp);
+
+        cameraTarget.SetPositionAndRotation(
+            transform.position + cameraUp * cameraTargetHeight,
+            Quaternion.LookRotation(fwd, cameraUp) * Quaternion.Euler(cameraPitch, 0f, 0f));
     }
 
     void WalkSurface()
