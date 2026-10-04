@@ -1,186 +1,219 @@
-using System;
-using Unity.VisualScripting;
 using UnityEngine;
-using UnityEngine.PlayerLoop;
 
 /// <summary>
-/// Improved wall-walking mechanics with mouse look.
-/// Provides smoother transitions between surfaces and better camera control.
+/// Simple spider controller: walks on any surface and treats walls as more floor.
+/// Kinematic, sphere-cast based. Does not use CharacterController or SurfaceDetector.
 /// </summary>
-public partial class ImprovedWallWalker : MonoBehaviour
+public class ImprovedWallWalker : MonoBehaviour
 {
-    public CharacterController controller;
-    [Header("Movement Settings")]
+    [Header("Movement")]
     public float moveSpeed = 3f;
-    public float jumpForce = 4f;
-    public float gravity = 8f;
+    public float jumpForce = 5f;
+    public float gravity = 15f;
+    [Tooltip("How fast the body turns to match the surface (higher = snappier).")]
+    public float alignSpeed = 12f;
 
-    [Header("Surface Detection")]
-    [SerializeField] public SurfaceDetector surfaceDetector;
+    [Header("Body")]
+    [Tooltip("Radius of the collision sphere.")]
+    public float radius = 0.3f;
+    [Tooltip("Distance from body center to surface while stuck.")]
+    public float hoverDistance = 0.4f;
+    [Tooltip("How far to look for a surface to stick to.")]
+    public float stickRange = 0.3f;
+    public LayerMask surfaceMask = ~0;
 
-    [Header("Camera Settings")]
+    [Header("Camera")]
     public float mouseSensitivity = 2f;
     public float maxLookAngle = 80f;
     public Transform playerCamera;
 
-    [Header("Rotation Settings")]
-    public float rotationSpeed = 10f;
-
-    // Private variables
-    public Vector3 velocity; // Made public for SurfaceDetector access
-
-    private float cameraPitch = 0f;
-    private Transform cameraHolder;
-    private Vector3 moveDirection;
+    [Header("Debug")]
     public bool debugMovement;
+
+    // Read by SurfaceDetector.
+    [HideInInspector] public Vector3 velocity;
+
+    public bool IsStuck { get; private set; }
+
+    const float Skin = 0.02f;
+
+    Transform cameraHolder;
+    float cameraPitch;
+    Vector3 normal = Vector3.up;
+    float airUntil;
 
     void Start()
     {
-        InitializeComponents();
-    }
+        // Our own casts would otherwise fight the CharacterController's collider.
+        if (TryGetComponent(out CharacterController cc)) cc.enabled = false;
+        if (TryGetComponent(out SurfaceDetector sd)) sd.enabled = false;
 
-    #region Initialize
-    void InitializeComponents()
-    {
-        playerCamera = Camera.main != null ? Camera.main.transform : null;
+        normal = transform.up;
+        IsStuck = true;
+
+        if (playerCamera == null && Camera.main != null) playerCamera = Camera.main.transform;
         if (playerCamera == null)
         {
-            UnityEngine.Debug.LogError("Player camera not assigned!");
+            Debug.LogError("Player camera not assigned!");
             return;
         }
 
-        // Create camera holder
-        GameObject holder = new("CameraHolder");
-        cameraHolder = holder.transform;
-        cameraHolder.position = transform.position;
-        cameraHolder.parent = transform;
-        playerCamera.parent = cameraHolder;
+        cameraHolder = new GameObject("CameraHolder").transform;
+        cameraHolder.SetParent(transform, false);
+        playerCamera.SetParent(cameraHolder, true);
 
-        // Lock and hide cursor
         if (!Application.isEditor)
         {
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
-
         }
     }
- 
-    #endregion
 
     void Update()
     {
-        HandleMouseLook();
-        HandleMovement();
-        DebugMovement();
-    }
+        Look();
 
-    void HandleMouseLook()
-    {
-        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
-        float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity;
+        if (IsStuck) WalkSurface();
+        else FlyAir();
 
-        // Vertical rotation (pitch)
-        cameraPitch = Mathf.Clamp(cameraPitch - mouseY, -maxLookAngle, maxLookAngle);
-        cameraHolder.localRotation = Quaternion.Euler(cameraPitch, 0, 0);
+        Align();
 
-        // Horizontal rotation (yaw)
-        transform.Rotate(Vector3.up * mouseX);
-    }
-
-    void HandleMovement()
-    {
-        // Get input relative to camera view
-        float horizontal = Input.GetAxis("Horizontal");
-        float vertical = Input.GetAxis("Vertical");
-
-        // Calculate movement direction relative to camera and current surface
-        Vector3 playerForward = transform.forward;
-        Vector3 playerRight = transform.right; // Use character's right direction for lateral movement
-
-        moveDirection = (playerForward * vertical + playerRight * horizontal).normalized;
-
-        if (surfaceDetector.isGrounded)
+        if (debugMovement)
         {
-            // Project movement onto surface to follow contours
-            Vector3 surfaceMovement = Vector3.ProjectOnPlane(moveDirection, surfaceDetector.CurrentNormal).normalized;
-            
-            // Calculate movement relative to surface
-            velocity = surfaceMovement * moveSpeed;
+            Debug.DrawRay(transform.position, normal, Color.green);
+            Debug.DrawRay(transform.position, velocity, Color.yellow);
+        }
+    }
 
-            // Add stronger surface adherence for wall walking
-            float surfaceAngle = Vector3.Angle(Vector3.up, surfaceDetector.CurrentNormal);
-            float adherenceForce = Mathf.Clamp01(surfaceAngle / 90f) * gravity * 0.3f; // Stronger on steeper surfaces
-            velocity += -surfaceDetector.CurrentNormal * adherenceForce;
+    void Look()
+    {
+        float mx = Input.GetAxis("Mouse X") * mouseSensitivity;
+        float my = Input.GetAxis("Mouse Y") * mouseSensitivity;
 
-            // Handle jumping
-            if (Input.GetButtonDown("Jump"))
+        transform.Rotate(transform.up, mx, Space.World);
+
+        if (cameraHolder == null) return;
+        cameraPitch = Mathf.Clamp(cameraPitch - my, -maxLookAngle, maxLookAngle);
+        cameraHolder.localRotation = Quaternion.Euler(cameraPitch, 0f, 0f);
+    }
+
+    void WalkSurface()
+    {
+        Vector3 input = transform.forward * Input.GetAxis("Vertical") + transform.right * Input.GetAxis("Horizontal");
+        Vector3 dir = Vector3.ProjectOnPlane(input, normal);
+        if (dir.sqrMagnitude > 1f) dir.Normalize();
+
+        Vector3 pos = transform.position;
+        Vector3 step = dir * (moveSpeed * Time.deltaTime);
+        float dist = step.magnitude;
+        velocity = dir * moveSpeed;
+
+        if (Input.GetButtonDown("Jump"))
+        {
+            velocity = normal * jumpForce + dir * moveSpeed;
+            IsStuck = false;
+            airUntil = Time.time + 0.2f;
+            return;
+        }
+
+        if (dist > 0.0001f)
+        {
+            Vector3 d = step / dist;
+            // A blocking surface ahead (wall or ceiling) becomes the new floor.
+            if (Physics.SphereCast(pos, radius, d, out RaycastHit wall, dist + Skin, surfaceMask, QueryTriggerInteraction.Ignore)
+                && wall.distance > 0f)
             {
-                velocity = surfaceDetector.CurrentNormal * jumpForce;
+                pos += d * Mathf.Max(0f, wall.distance - Skin);
+                normal = wall.normal;
             }
+            else
+            {
+                pos += step;
+            }
+        }
+
+        if (!Stick(ref pos)) WrapEdge(ref pos, dist);
+
+        transform.position = pos;
+    }
+
+    // Re-snap to the surface under the body.
+    bool Stick(ref Vector3 pos)
+    {
+        float reach = hoverDistance + stickRange;
+        if (!Physics.SphereCast(pos + normal * radius, radius, -normal, out RaycastHit hit, reach, surfaceMask, QueryTriggerInteraction.Ignore))
+            return false;
+
+        // Spherecast normals can be edge-smoothed; blend to avoid jitter.
+        normal = Vector3.Slerp(normal, hit.normal, 0.5f).normalized;
+        pos = hit.point + hit.normal * hoverDistance;
+        return true;
+    }
+
+    // Walked off a convex edge: look back under the edge for the side face.
+    void WrapEdge(ref Vector3 pos, float stepDist)
+    {
+        Vector3 back = -Vector3.ProjectOnPlane(velocity, normal).normalized;
+        if (back == Vector3.zero) { LeaveSurface(); return; }
+
+        Vector3 origin = pos - normal * (hoverDistance + radius);
+        float reach = stepDist + radius * 2f + hoverDistance;
+        if (Physics.SphereCast(origin, radius * 0.5f, back, out RaycastHit hit, reach, surfaceMask, QueryTriggerInteraction.Ignore)
+            && hit.distance > 0f)
+        {
+            normal = hit.normal;
+            pos = hit.point + hit.normal * hoverDistance;
         }
         else
         {
-            // Apply gravity when in air
-            velocity += Physics.gravity * Time.deltaTime;
-
-            // Allow some air control
-            Vector3 horizontalVelocity = Vector3.ProjectOnPlane(velocity, Vector3.up);
-            Vector3 airMove = moveDirection * moveSpeed * 0.5f;
-            velocity = Vector3.Lerp(horizontalVelocity, airMove, Time.deltaTime * 2f) + Vector3.Project(velocity, Vector3.up);
+            LeaveSurface();
         }
+    }
 
-        // Move the character using CharacterController to prevent clipping
-        Vector3 movement = velocity * Time.deltaTime;
+    void LeaveSurface()
+    {
+        IsStuck = false;
+        airUntil = 0f;
+    }
 
-        // For grounded movement, use less restrictive collision checking
-        if (movement.magnitude > 0.001f && !surfaceDetector.isGrounded)
+    void FlyAir()
+    {
+        velocity += Vector3.down * (gravity * Time.deltaTime);
+
+        Vector3 pos = transform.position;
+        Vector3 step = velocity * Time.deltaTime;
+        float dist = step.magnitude;
+
+        if (dist > 0.0001f)
         {
-            float safeDistance = surfaceDetector.GetSafeMovementDistance(movement.normalized, movement.magnitude);
-            movement = movement.normalized * safeDistance;
-        }
-        else if (movement.magnitude > 0.001f && surfaceDetector.isGrounded)
-        {
-            // For surface movement, allow more freedom and let CharacterController handle collisions
-            float safeDistance = surfaceDetector.GetSafeMovementDistance(movement.normalized, movement.magnitude);
-            if (safeDistance < movement.magnitude * 0.5f) // Only restrict if collision is very close
+            Vector3 d = step / dist;
+            if (Physics.SphereCast(pos, radius, d, out RaycastHit hit, dist + Skin, surfaceMask, QueryTriggerInteraction.Ignore)
+                && hit.distance > 0f && Time.time >= airUntil)
             {
-                movement = movement.normalized * safeDistance;
+                // Land on whatever we hit, walls included.
+                normal = hit.normal;
+                pos = hit.point + hit.normal * hoverDistance;
+                velocity = Vector3.zero;
+                IsStuck = true;
+            }
+            else
+            {
+                pos += step;
             }
         }
 
-        // Use CharacterController.Move for proper collision handling
-        controller.Move(movement);
-
-        // Align character with surface - faster rotation for better wall walking
-        if (surfaceDetector.isGrounded)
-        {
-            Quaternion targetRotation = Quaternion.FromToRotation(transform.up, surfaceDetector.CurrentNormal) * transform.rotation;
-            float rotSpeed = moveDirection != Vector3.zero ? rotationSpeed * 2f : rotationSpeed; // Faster rotation when moving
-            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * rotSpeed);
-        }
+        transform.position = pos;
     }
 
-    void OnDrawGizmos()
+    void Align()
     {
-        if (debugMovement)
-        {
-            // Draw the character's movement direction
-            Gizmos.color = Color.yellow;
-
-            // Draw the movement direction line
-            Gizmos.DrawLine(transform.position, transform.position + transform.TransformDirection(moveDirection) * 2f);
-        }
-    }
-    void DebugMovement()
-    {
-
-        // Visualize movement direction
-        UnityEngine.Debug.DrawLine(transform.position, transform.position + velocity.normalized * 2f, Color.yellow);
+        Vector3 targetUp = IsStuck ? normal : Vector3.up;
+        Quaternion target = Quaternion.FromToRotation(transform.up, targetUp) * transform.rotation;
+        transform.rotation = Quaternion.Slerp(transform.rotation, target, 1f - Mathf.Exp(-alignSpeed * Time.deltaTime));
     }
 
     void OnDisable()
     {
-        // Restore cursor when disabled
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
     }
