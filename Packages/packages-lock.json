@@ -15,7 +15,7 @@
       "hash": "7d4bb3cf229814b4177402edb570b8e1569c30a3"
     },
     "com.unity.ai.navigation": {
-      "version": "2.0.14",
+      "version": "2.0.16",
       "depth": 0,
       "source": "registry",
       "dependencies": {
@@ -58,7 +58,7 @@
       }
     },
     "com.unity.collab-proxy": {
-      "version": "2.13.6",
+      "version": "2.14.0",
       "depth": 0,
       "source": "registry",
       "dependencies": {},
@@ -109,12 +109,10 @@
       "dependencies": {}
     },
     "com.unity.ide.rider": {
-      "version": "3.0.38",
+      "version": "3.1.0",
       "depth": 0,
       "source": "registry",
-      "dependencies": {
-        "com.unity.ext.nunit": "1.0.6"
-      },
+      "dependencies": {},
       "url": "https://packages.unity.com"
     },
     "com.unity.ide.visualstudio": {
@@ -133,7 +131,7 @@
       "dependencies": {}
     },
     "com.unity.multiplayer.center": {
-      "version": "2.0.1",
+      "version": "2.1.0",
       "depth": 0,
       "source": "builtin",
       "dependencies": {
@@ -219,7 +217,7 @@
       }
     },
     "com.unity.splines": {
-      "version": "2.9.1",
+      "version": "2.9.2",
       "depth": 2,
       "source": "registry",
       "dependencies": {
@@ -272,7 +270,7 @@
       }
     },
     "com.unity.visualscripting": {
-      "version": "1.9.12",
+      "version": "1.9.13",
       "depth": 0,
       "source": "registry",
       "dependencies": {
