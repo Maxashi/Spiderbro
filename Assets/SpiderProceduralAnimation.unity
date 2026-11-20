@@ -1,4 +1,6 @@
-%YAML 1.1
+sudo apt update
+sudo apt install git-lfs
+git lfs install%YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
 --- !u!29 &1
 OcclusionCullingSettings:
@@ -792,7 +794,9 @@ PrefabInstance:
       propertyPath: m_Name
       value: smoothcube (3)
       objectReference: {fileID: 0}
-    - target: {fileID: 8164078558771037576, guid: b5ec3dce30a2df94299fcbb6c7f97823, type: 3}
+    - target: {fileID: 8164078558771037576, sudo apt update
+sudo apt install git-lfs
+git lfs installguid: b5ec3dce30a2df94299fcbb6c7f97823, type: 3}
       propertyPath: m_IsActive
       value: 1
       objectReference: {fileID: 0}

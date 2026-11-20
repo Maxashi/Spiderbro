@@ -8,13 +8,16 @@ public class SpiderAnimation : MonoBehaviour
     public Animator playerAnimator;
     public float smoothness;
     public float speed;
+    [Range(0f, 1f)]
+    public float airborneSpeedMultiplier = 0.08f;
     [SerializeField] private float velocity;
     private Vector3 lastBodyPos;
     private float lastVelocity;
+    private ImprovedWallWalker movementController;
 
     void Start()
     {
-
+        movementController = GetComponentInParent<ImprovedWallWalker>();
     }
 
 
@@ -27,8 +30,12 @@ public class SpiderAnimation : MonoBehaviour
             velocity = 0;
         else
             lastVelocity = velocity;
-        playerAnimator.speed = velocity * speed;
-        playerAnimator.SetFloat("velocity", velocity * speed);
+        float animationVelocity = velocity * speed;
+        if (movementController != null && !movementController.IsStuck)
+            animationVelocity *= airborneSpeedMultiplier;
+
+        playerAnimator.speed = animationVelocity;
+        playerAnimator.SetFloat("velocity", animationVelocity);
 
 
         lastBodyPos = transform.position;

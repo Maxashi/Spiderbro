@@ -911,6 +911,7 @@ MonoBehaviour:
   playerAnimator: {fileID: 4282457175089744357}
   smoothness: 1
   speed: 2000
+  airborneSpeedMultiplier: 0.08
   velocity: 1.48
 --- !u!4 &1531302338249125605
 Transform:
@@ -3579,17 +3580,29 @@ MonoBehaviour:
   jumpForce: 14
   gravity: 8
   alignSpeed: 12
+  jumpAlignSpeed: 5
   radius: 0.3
   hoverDistance: 0.2
   stickRange: 0.4
   surfaceMask:
     serializedVersion: 2
     m_Bits: 4294967295
-  mouseSensitivity: 2
-  maxLookAngle: 80
+  mouseSensitivity: 4
+  maxLookAngle: 25
+  maxDownLookAngle: 150
   cameraTarget: {fileID: 9100000000000000002}
   cameraTargetHeight: 0.5
-  cameraUpSpeed: 4
+  cameraUpSpeed: 8
+  aimMouseSensitivity: 0.45
+  aimFieldOfView: 30
+  cameraFovSpeed: 8
+  gameplayCamera: {fileID: 0}
+  trajectoryDuration: 4
+  trajectoryStep: 0.05
+  trajectoryWidth: 0.035
+  trajectoryColor: {r: 0.25, g: 0.85, b: 1, a: 0.9}
+  landingColor: {r: 0.25, g: 0.9, b: 1, a: 0.8}
+  landingMarkerSize: 0.85
   debugMovement: 1
   debugOverlay: 1
   velocity: {x: 0, y: 0, z: 0}
@@ -4814,7 +4827,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 9100000000000000010}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 72ece51f2901e7445ab60da3685d6b5f, type: 3}
   m_Name: 
