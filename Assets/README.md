@@ -63,5 +63,31 @@ Slow spider leg animation while airborne
 - Retro styling should come from intentional art direction, not accidental technical problems. The result should still have a polished composition, readable surfaces, clear interaction feedback, and consistent visual rules.
 - Avoid large content or effects that contradict the retro target or noticeably increase the WebGL payload. Reuse modular level pieces and effects where possible.
 
+## WebGL release builds
+
+The checked-in player settings use Brotli compression with decompression fallback for itch.io and tested static hosts. To build with the same settings used by CI:
+
+```bash
+./scripts/build-webgl.sh Builds/WebGL
+```
+
+Set `SPIDERBRO_BUILD_VERSION` to stamp the product version. Set `SPIDERBRO_DEVELOPMENT_BUILD=1` for a development player with debugging enabled. Set `SPIDERBRO_WEBGL_COMPRESSION=Disabled` for a host that cannot serve or decompress Unity's compressed WebGL output, or use `Gzip` when the host requires it:
+
+```bash
+SPIDERBRO_WEBGL_COMPRESSION=Disabled \
+  ./scripts/build-webgl.sh Builds/WebGL-Uncompressed
+```
+
+The builder writes `build-manifest.json` beside the WebGL output. It is the release record for the Unity version, product version, target, compression format, commit, and build time.
+
+The GitHub Actions workflow builds pull requests, `main`, manual runs, and `v*` tags. It requires a Linux self-hosted runner labeled `unity-6000-6-10` with:
+
+- Unity 6000.6.10f1 and the WebGL Build Support module installed;
+- the repository's Unity license activated for unattended use;
+- Git LFS, `zip`, and GitHub CLI available;
+- enough disk space for the Unity Library and a production WebGL build.
+
+Tagged builds publish the ZIP as a GitHub release. Publishing from there to itch.io is deliberately a separate upload step until deployment credentials and the target itch project are finalized.
+
 ## Explaination video
 https://www.youtube.com/watch?v=AhywDyu0EGw
