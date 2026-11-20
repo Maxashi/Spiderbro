@@ -24,6 +24,7 @@
 ## Source Control commit messages
 
 When using the commit-message button in the Source Control side panel, formulate the message as a short explanation of the user-visible or gameplay-visible change.
+Repository-specific AI instructions are stored in `.copilot-commit-message-instructions.md` and wired into VS Code through `.vscode/settings.json`, so the generated message should describe the actual diff instead of defaulting to a generic refactoring summary.
 
 1. Write a concise imperative summary on the first line, ideally no longer than 72 characters.
 2. Start with a useful verb such as `Add`, `Fix`, `Improve`, `Refine`, or `Remove`.
