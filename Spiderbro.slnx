@@ -1,0 +1,4 @@
+﻿<Solution>
+  <Project Path="DOTween.Modules.csproj" />
+  <Project Path="Assembly-CSharp.csproj" />
+</Solution>
