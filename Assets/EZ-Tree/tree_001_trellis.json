@@ -1,0 +1,276 @@
+{
+  "seed": 14308,
+  "type": "deciduous",
+  "bark": {
+    "type": "Bark002",
+    "maps": {
+      "color": {
+        "metadata": {
+          "version": 4.6,
+          "type": "Texture",
+          "generator": "Texture.toJSON"
+        },
+        "uuid": "45b55a8a-0370-45e5-a314-6d08fc03bb20",
+        "name": "",
+        "image": "698c9fc7-350c-4ea8-8138-3418a0457d93",
+        "mapping": 300,
+        "channel": 0,
+        "repeat": [
+          1,
+          2
+        ],
+        "offset": [
+          0,
+          0
+        ],
+        "center": [
+          0,
+          0
+        ],
+        "rotation": 0,
+        "wrap": [
+          1000,
+          1000
+        ],
+        "format": 1023,
+        "internalFormat": null,
+        "type": 1009,
+        "colorSpace": "srgb",
+        "minFilter": 1008,
+        "magFilter": 1006,
+        "anisotropy": 1,
+        "flipY": true,
+        "generateMipmaps": true,
+        "premultiplyAlpha": false,
+        "unpackAlignment": 4
+      },
+      "ao": null,
+      "normal": {
+        "metadata": {
+          "version": 4.6,
+          "type": "Texture",
+          "generator": "Texture.toJSON"
+        },
+        "uuid": "9619493c-7d68-48f9-9394-7790c8fdf757",
+        "name": "",
+        "image": "28a063ed-091e-4dba-bde1-3998dd7be7e8",
+        "mapping": 300,
+        "channel": 0,
+        "repeat": [
+          1,
+          2
+        ],
+        "offset": [
+          0,
+          0
+        ],
+        "center": [
+          0,
+          0
+        ],
+        "rotation": 0,
+        "wrap": [
+          1000,
+          1000
+        ],
+        "format": 1023,
+        "internalFormat": null,
+        "type": 1009,
+        "colorSpace": "",
+        "minFilter": 1008,
+        "magFilter": 1006,
+        "anisotropy": 1,
+        "flipY": true,
+        "generateMipmaps": true,
+        "premultiplyAlpha": false,
+        "unpackAlignment": 4
+      },
+      "roughness": {
+        "metadata": {
+          "version": 4.6,
+          "type": "Texture",
+          "generator": "Texture.toJSON"
+        },
+        "uuid": "1a5e888f-808c-4c97-8036-14b937f26860",
+        "name": "",
+        "image": "62c099c7-d8f5-4b3a-b869-3c4476be6e76",
+        "mapping": 300,
+        "channel": 0,
+        "repeat": [
+          1,
+          2
+        ],
+        "offset": [
+          0,
+          0
+        ],
+        "center": [
+          0,
+          0
+        ],
+        "rotation": 0,
+        "wrap": [
+          1000,
+          1000
+        ],
+        "format": 1023,
+        "internalFormat": null,
+        "type": 1009,
+        "colorSpace": "",
+        "minFilter": 1008,
+        "magFilter": 1006,
+        "anisotropy": 1,
+        "flipY": true,
+        "generateMipmaps": true,
+        "premultiplyAlpha": false,
+        "unpackAlignment": 4
+      }
+    },
+    "tint": 13552830,
+    "flatShading": false,
+    "textured": true,
+    "textureScale": {
+      "x": 0.5,
+      "y": 0.5
+    }
+  },
+  "branch": {
+    "levels": 2,
+    "angle": {
+      "1": 48,
+      "2": 75,
+      "3": 60
+    },
+    "children": {
+      "0": 10,
+      "1": 3,
+      "2": 3
+    },
+    "force": {
+      "direction": {
+        "x": 0.18,
+        "y": 1,
+        "z": 1
+      },
+      "strength": 0.001
+    },
+    "gnarliness": {
+      "0": -0.24,
+      "1": 0.27,
+      "2": 0.5,
+      "3": 0.5
+    },
+    "length": {
+      "0": 20.3,
+      "1": 17.3,
+      "2": 1.4,
+      "3": 2
+    },
+    "radius": {
+      "0": 0.81,
+      "1": 0.56,
+      "2": 0.76,
+      "3": 0.7
+    },
+    "sections": {
+      "0": 12,
+      "1": 10,
+      "2": 10,
+      "3": 10
+    },
+    "segments": {
+      "0": 8,
+      "1": 6,
+      "2": 4,
+      "3": 3
+    },
+    "start": {
+      "1": 0.53,
+      "2": 0.33,
+      "3": 0
+    },
+    "taper": {
+      "0": 0.7,
+      "1": 0.7,
+      "2": 0.7,
+      "3": 0.7
+    },
+    "twist": {
+      "0": 0.3,
+      "1": -0.07,
+      "2": 0,
+      "3": 0
+    }
+  },
+  "leaves": {
+    "type": "ash",
+    "map": {
+      "metadata": {
+        "version": 4.6,
+        "type": "Texture",
+        "generator": "Texture.toJSON"
+      },
+      "uuid": "0bf7606e-83ca-461e-b3e6-c426511720ca",
+      "name": "",
+      "image": "4ef864fd-bc7f-44dc-af25-20c75f1d608b",
+      "mapping": 300,
+      "channel": 0,
+      "repeat": [
+        1,
+        1
+      ],
+      "offset": [
+        0,
+        0
+      ],
+      "center": [
+        0,
+        0
+      ],
+      "rotation": 0,
+      "wrap": [
+        1001,
+        1001
+      ],
+      "format": 1023,
+      "internalFormat": null,
+      "type": 1009,
+      "colorSpace": "srgb",
+      "minFilter": 1008,
+      "magFilter": 1006,
+      "anisotropy": 1,
+      "flipY": true,
+      "generateMipmaps": true,
+      "premultiplyAlpha": true,
+      "unpackAlignment": 4
+    },
+    "billboard": "double",
+    "angle": 38,
+    "count": 15,
+    "start": 0.28,
+    "size": 2.1,
+    "sizeVariance": 0.21,
+    "tint": 16777215,
+    "alphaTest": 0.83,
+    "roundedNormals": true
+  },
+  "trellis": {
+    "enabled": true,
+    "position": {
+      "x": 0,
+      "y": 0,
+      "z": 1.3
+    },
+    "width": 20,
+    "height": 32,
+    "spacing": 4,
+    "force": {
+      "strength": 0.014,
+      "maxDistance": 18.2,
+      "falloff": 1.3
+    },
+    "cylinderRadius": 0.17,
+    "visible": true,
+    "color": 5519173
+  }
+}
