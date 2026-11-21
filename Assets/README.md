@@ -65,7 +65,80 @@ Slow spider leg animation while airborne
 
 ## WebGL release builds
 
-The checked-in player settings use Brotli compression with decompression fallback for itch.io and tested static hosts. To build with the same settings used by CI:
+The checked-in player settings use Brotli compression with decompression fallback for itch.io and tested static hosts.
+
+### Build the first prototype in Unity
+
+1. Save the project and stop Play Mode.
+2. Open **File > Build Profiles**.
+3. Select **WebGL**. If Unity asks you to switch platforms, select **Switch Platform** and wait for the reimport to finish.
+4. In the scene list, confirm that `Assets/Scenes/Test.unity` is the only enabled scene. Keep prototype and demo scenes disabled.
+5. Enable **Development Build** for a prototype so warnings and debugging are available. Disable it for a public release candidate.
+6. Select **Build And Run** to build and open the game automatically, or **Build** to choose an output folder manually. Use an empty folder such as `Builds/Prototype`.
+7. Do not interrupt the build. A successful build contains `index.html` and a `Build` directory at the output root.
+
+For this machine, building through the open Unity Editor is the reliable prototype workflow because an unattended Unity license is required to use the command-line builder.
+
+### Test the build locally
+
+Do not open `index.html` directly from the file browser. Serve the WebGL output over HTTP instead:
+
+```bash
+cd Builds/Prototype
+python3 -m http.server 8080
+```
+
+Open <http://localhost:8080> in a private or fresh browser window. Check:
+
+- the loading indicator completes without missing-file or decompression errors;
+- keyboard, mouse, and any controller input work as expected;
+- audio starts after the first interaction;
+- pausing, refocusing, and resizing the browser remain stable;
+- the browser console contains no unexpected runtime errors.
+
+Repeat the test with the browser cache disabled before treating the build as ready to upload.
+
+### Deploy to itch.io
+
+1. Sign in to itch.io and create a new project, or open the existing Spiderbro project.
+2. Set the project classification and kind of project as appropriate, then enable **HTML** in the playable-in-browser options.
+3. Package the *contents* of the Unity WebGL output, not the parent build directory. The ZIP must contain this structure:
+
+```text
+spiderbro-webgl.zip
+|- index.html
+|- Build/
+|- TemplateData/
+`- build-manifest.json        # present when produced by the command-line builder
+```
+
+`StreamingAssets/` may also be present and must be included when it is generated. `index.html` must be at the root of the ZIP, not inside an extra folder.
+
+On Linux, package the output with:
+
+```bash
+cd Builds/Prototype
+zip -r ../Spiderbro-WebGL-Prototype.zip .
+```
+
+4. Upload the ZIP as a build on the itch.io project page.
+5. Mark the uploaded file as **This file will be played in the browser**.
+6. Set the itch.io embed width and height to match the desired play area. Start with the Unity WebGL values `960 x 600`, then adjust the page layout after testing the game at real browser sizes.
+7. Save the project as **Draft** or **Restricted** first.
+8. Open the itch.io game page in a private browser window, test the complete loading flow again, and only then make the project Public.
+
+If itch.io reports a decompression problem, test an uncompressed build:
+
+```bash
+SPIDERBRO_WEBGL_COMPRESSION=Disabled \
+  ./scripts/build-webgl.sh Builds/Prototype-Uncompressed
+```
+
+For new uploads, use a new itch build version or replace the previous file deliberately. Avoid leaving multiple browser-playable ZIPs enabled at once because itch.io may launch the wrong build.
+
+### Command-line and CI builds
+
+To build with the same settings used by CI:
 
 ```bash
 ./scripts/build-webgl.sh Builds/WebGL
@@ -88,6 +161,17 @@ The GitHub Actions workflow builds pull requests, `main`, manual runs, and `v*` 
 - enough disk space for the Unity Library and a production WebGL build.
 
 Tagged builds publish the ZIP as a GitHub release. Publishing from there to itch.io is deliberately a separate upload step until deployment credentials and the target itch project are finalized.
+
+### Release checklist
+
+- Build from a clean or freshly saved project.
+- Confirm the correct scene is enabled and starts at the intended point.
+- Confirm the product name and version in the Unity player settings.
+- Test the ZIP itself, not only the original build folder.
+- Test with a cleared cache and in a private browser window.
+- Check first-load time, download size, frame rate, input, audio, and browser resizing.
+- Keep a copy of the exact uploaded ZIP and its build manifest for rollback.
+- Publish the itch.io page only after the uploaded browser build passes those checks.
 
 ## Explaination video
 https://www.youtube.com/watch?v=AhywDyu0EGw
